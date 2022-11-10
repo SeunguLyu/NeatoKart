@@ -20,7 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'build_circuit = neato_kart.build_circuit:main'
+            'build_circuit = neato_kart.build_circuit:main',
+            'detect_april_tag = neato_kart.detect_april_tag:main'
         ],
     },
 )
