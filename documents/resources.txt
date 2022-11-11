@@ -10,3 +10,6 @@ https://github.com/yanshil/video-apriltags
 https://berndpfrommer.github.io/tagslam_web/visualization/
 https://github.com/SteveMacenski/slam_toolbox/blob/ros2/README.md
 https://docs.opencv.org/3.4/db/da9/tutorial_aruco_board_detection.html
+
+https://learnopencv.com/camera-calibration-using-opencv/
+https://navigation.ros.org/tutorials/docs/camera_calibration.html

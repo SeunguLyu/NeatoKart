@@ -14,7 +14,7 @@ class RecordData(Node):
         super().__init__('ball_tracker')
 
         self.isImage = True
-        self.image_name = "left 10.5 front 72.png"
+        self.image_name = "tilted 48 test.png"
         self.did_draw = False
 
         self.cv_image = None                        # the latest image from the camera
@@ -34,13 +34,14 @@ class RecordData(Node):
     def process_image(self, msg):
         """ Process image messages from ROS and stash them in an attribute
             called cv_image for subsequent processing """
-        self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+        #self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
 
     def loop_wrapper(self):
         """ This function takes care of calling the run_loop function repeatedly.
             We are using a separate thread to run the loop_wrapper to work around
             issues with single threaded executors in ROS2 """
         cv2.namedWindow('video_window')
+        #cv2.namedWindow('undistorted_window')
         while True:
             self.run_loop()
             time.sleep(0.1)
@@ -49,9 +50,12 @@ class RecordData(Node):
         if not self.cv_image is None and not self.did_draw:
             gray = cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2GRAY)
             detector = apriltag.Detector(families="tag36h11")
+            K = [971.646825, 0.000000, 501.846472, 0.000000, 972.962863, 402.829241, 0.000000, 0.000000, 1.000000]
+            D = [0.129212, -0.370131, -0.000169, -0.001557, 0.000000]
+            #img = cv2.undistort(self.cv_image, K, D)
             camera_info = {}
-            camera_info["params"] = [10, 10, 10, 10]
-            results = detector.detect(gray, estimate_tag_pose = True, camera_params=camera_info["params"], tag_size = 0.1)
+            camera_info["params"] = [971.64, 972.962, 501.846, 402.82]
+            results = detector.detect(gray, estimate_tag_pose = True, camera_params=camera_info["params"], tag_size = 0.09)
 
             for r in results:
                 # extract the bounding box (x, y)-coordinates for the AprilTag
@@ -75,9 +79,10 @@ class RecordData(Node):
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 print("[INFO] tag family: {}".format(tagFamily))
 
-                print(r.pose_t)
+                print(r.pose_R)
 
             cv2.imshow('video_window', self.cv_image)
+            #cv2.imshow('undistorted_window', img)
             if self.isImage:
                 self.did_draw = True
             cv2.waitKey(5)
