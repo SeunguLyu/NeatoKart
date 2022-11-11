@@ -1,0 +1,12 @@
+https://raceon.io/localization/
+https://github.com/teddylew12/race_on_cv
+https://github.com/pupil-labs/apriltags
+http://wiki.lofarolabs.com/index.php/Localizing_with_AprilTags
+https://www.mathworks.com/help/vision/ug/camera-calibration-using-apriltag-markers.html
+https://pupil-apriltags.readthedocs.io/en/stable/api.html#pupil_apriltags.Detection.pose_t
+https://github.com/duckietown/lib-dt-apriltags
+https://april.eecs.umich.edu/wiki/Camera_suite
+https://github.com/yanshil/video-apriltags
+https://berndpfrommer.github.io/tagslam_web/visualization/
+https://github.com/SteveMacenski/slam_toolbox/blob/ros2/README.md
+https://docs.opencv.org/3.4/db/da9/tutorial_aruco_board_detection.html

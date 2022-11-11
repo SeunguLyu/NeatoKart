@@ -50,7 +50,7 @@ class RecordData(Node):
             gray = cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2GRAY)
             detector = apriltag.Detector(families="tag36h11")
             camera_info = {}
-            camera_info["params"] = [313.111, 310.344, 336.114, 239.242]
+            camera_info["params"] = [10, 10, 10, 10]
             results = detector.detect(gray, estimate_tag_pose = True, camera_params=camera_info["params"], tag_size = 0.1)
 
             for r in results:
@@ -75,7 +75,7 @@ class RecordData(Node):
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 print("[INFO] tag family: {}".format(tagFamily))
 
-                print(r.pose_err)
+                print(r.pose_t)
 
             cv2.imshow('video_window', self.cv_image)
             if self.isImage:
