@@ -13,3 +13,8 @@ https://docs.opencv.org/3.4/db/da9/tutorial_aruco_board_detection.html
 
 https://learnopencv.com/camera-calibration-using-opencv/
 https://navigation.ros.org/tutorials/docs/camera_calibration.html
+
+https://linklab-uva.github.io/autonomousracing/assets/files/L11-compressed.pdf
+https://docs.ros.org/en/humble/Tutorials/Intermediate/Tf2/Quaternion-Fundamentals.html
+https://docs.ros.org/en/galactic/Tutorials/Intermediate/Tf2/Introduction-To-Tf2.html
+https://docs.ros.org/en/foxy/Tutorials/Intermediate/Tf2/Writing-A-Tf2-Broadcaster-Py.html
