@@ -42,6 +42,7 @@ class RecordData(Node):
             self.cv_image = cv2.imread(image_path)
 
         self.create_subscription(Image, image_topic, self.process_image, 10)
+        self.create_subscription(Odom, image_topic, self.process_image, 10)
         thread = Thread(target=self.loop_wrapper)
         thread.start()
 
@@ -66,7 +67,7 @@ class RecordData(Node):
     def process_image(self, msg):
         """ Process image messages from ROS and stash them in an attribute
             called cv_image for subsequent processing """
-        self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+        # self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
         self.timestamp = msg.header.stamp
 
     def loop_wrapper(self):
@@ -77,7 +78,7 @@ class RecordData(Node):
         #cv2.namedWindow('undistorted_window')
         while True:
             self.run_loop()
-            #self.create_map_frame()
+            self.create_map_frame()
             time.sleep(0.5)
 
     def run_loop(self):
