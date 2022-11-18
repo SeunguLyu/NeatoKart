@@ -15,6 +15,7 @@ from tf2_ros.transform_listener import TransformListener
 from tf2_ros.transform_broadcaster import TransformBroadcaster
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, TransformStamped, Transform
 from .angle_helpers import quaternion_from_euler, rotation_matrix_to_euler
+import numpy as np
 import PyKDL
 
 class RecordData(Node):
@@ -22,7 +23,7 @@ class RecordData(Node):
         super().__init__('ball_tracker')
 
         self.isImage = True
-        self.image_name = "left 10.5 front 24.png"
+        self.image_name = "tilted 48 test.png"
         self.did_draw = False
 
         self.tf_buffer = Buffer()
@@ -42,14 +43,13 @@ class RecordData(Node):
             self.cv_image = cv2.imread(image_path)
 
         self.create_subscription(Image, image_topic, self.process_image, 10)
-        self.create_subscription(Odom, image_topic, self.process_image, 10)
         thread = Thread(target=self.loop_wrapper)
         thread.start()
 
     def create_map_frame(self):
         
         q = quaternion_from_euler(0, 0, 0.07)
-        test = self.tf_buffer.lookup_transform("base_link", "odom", self.timestamp)
+        #test = self.tf_buffer.lookup_transform("base_link", "odom", self.timestamp)
         #print(test)
         transform = TransformStamped()
         transform.header.stamp = self.timestamp
@@ -78,7 +78,7 @@ class RecordData(Node):
         #cv2.namedWindow('undistorted_window')
         while True:
             self.run_loop()
-            self.create_map_frame()
+            #self.create_map_frame()
             time.sleep(0.5)
 
     def run_loop(self):
@@ -112,12 +112,27 @@ class RecordData(Node):
                 print("[INFO] tag family: {}".format(tagFamily))
                 print("[INFO] tag id: {}".format(r.tag_id))
 
-                print(r.pose_t)
-                rot = PyKDL.Rotation(r.pose_R[0][0], r.pose_R[0][1], r.pose_R[0][2],
-                                    r.pose_R[1][0], r.pose_R[1][1], r.pose_R[1][2],
-                                    r.pose_R[2][0], r.pose_R[2][1], r.pose_R[2][2])
+                #print(r.pose_t)
                 
-                print(rot.GetEulerZYX())
+                trans_tag_to_cam = np.matrix([[r.pose_R[0][0], r.pose_R[0][1], r.pose_R[0][2], r.pose_t[0][0]],
+                                            [r.pose_R[1][0], r.pose_R[1][1], r.pose_R[1][2], r.pose_t[1][0]],
+                                            [r.pose_R[2][0], r.pose_R[2][1], r.pose_R[2][2], r.pose_t[2][0]],
+                                            [0, 0, 0, 1]])
+                
+                trans_cam_to_base = np.matrix([[0, 0, 1, 0.2],
+                                                [-1, 0, 0, 0],
+                                                [0, -1, 0, 0.05],
+                                                [0, 0, 0, 1]])
+
+                trans_tag_to_base = np.dot(trans_cam_to_base, trans_tag_to_cam)
+
+                rot = PyKDL.Rotation(trans_tag_to_base[0,0], trans_tag_to_base[0,1], trans_tag_to_base[0,2],
+                                    trans_tag_to_base[1,0], trans_tag_to_base[1,1], trans_tag_to_base[1,2],
+                                    trans_tag_to_base[2,0], trans_tag_to_base[2,1], trans_tag_to_base[2,2])
+
+                mat = rot.GetEulerZYX()
+                
+                print(mat[0] * 57.2958)
 
             cv2.imshow('video_window', detected_image)
             #cv2.imshow('undistorted_window', img)
