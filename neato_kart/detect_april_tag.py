@@ -22,13 +22,17 @@ class RecordData(Node):
     def __init__(self, image_topic):
         super().__init__('ball_tracker')
 
-        self.isImage = True
+        self.isImage = False
+        self.isVideo = True
         self.image_name = "tilted 48 test.png"
-        self.did_draw = False
+        self.video_name = "april_tag_test3.avi"
 
         self.tf_buffer = Buffer()
         self.tf_broadcaster = TransformBroadcaster(self)
         self.tf_listener = TransformListener(self.tf_buffer, self)
+
+        self.detector = apriltag.Detector(families="tag36h11", nthreads=2)
+        self.camera_param = [971.646825, 972.962863, 501.846472, 402.829241]
 
         self.timestamp = None
 
@@ -41,6 +45,14 @@ class RecordData(Node):
             image_path = os.path.abspath(os.path.join(image_path, os.pardir))
             image_path = os.path.join(image_path, 'dataset', self.image_name)
             self.cv_image = cv2.imread(image_path)
+
+        if self.isVideo:
+            video_path = os.path.dirname(os.path.realpath(__file__))
+            video_path = os.path.abspath(os.path.join(video_path, os.pardir))
+            video_path = os.path.join(video_path, 'dataset', self.video_name)
+            self.cap = cv2.VideoCapture(video_path)
+            if (self.cap.isOpened() == False): 
+                print("Unable to read camera feed")
 
         self.create_subscription(Image, image_topic, self.process_image, 10)
         thread = Thread(target=self.loop_wrapper)
@@ -77,21 +89,20 @@ class RecordData(Node):
         cv2.namedWindow('video_window')
         #cv2.namedWindow('undistorted_window')
         while True:
+            if self.isVideo:
+                ret, frame = self.cap.read()
+                self.cv_image = frame
             self.run_loop()
             #self.create_map_frame()
-            time.sleep(0.5)
+            time.sleep(0.1)
 
     def run_loop(self):
-        if not self.cv_image is None and not self.did_draw:
+        if not self.cv_image is None:
             gray = cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2GRAY)
-            detector = apriltag.Detector(families="tag36h11", nthreads=2)
-            camera_param = [971.646825, 972.962863, 501.846472, 402.829241]
-            results = detector.detect(gray, estimate_tag_pose = True, camera_params=camera_param, tag_size = 0.09)
+            results = self.detector.detect(gray, estimate_tag_pose = True, camera_params=self.camera_param, tag_size = 0.09)
 
             detected_image = self.cv_image.copy()
             for r in results:
-                # extract the bounding box (x, y)-coordinates for the AprilTag
-                # and convert each of the (x, y)-coordinate pairs to integers
                 (ptA, ptB, ptC, ptD) = r.corners
                 ptB = (int(ptB[0]), int(ptB[1]))
                 ptC = (int(ptC[0]), int(ptC[1]))
@@ -131,13 +142,12 @@ class RecordData(Node):
                                     trans_tag_to_base[2,0], trans_tag_to_base[2,1], trans_tag_to_base[2,2])
 
                 mat = rot.GetEulerZYX()
+
+                print(trans_tag_to_base)
                 
-                print(mat[0] * 57.2958)
+                print((mat[0] * 57.2958, mat[1] * 57.2958, mat[2] * 57.2958))
 
             cv2.imshow('video_window', detected_image)
-            #cv2.imshow('undistorted_window', img)
-            if self.isImage:
-                self.did_draw = False
             cv2.waitKey(5)
 
 if __name__ == '__main__':
