@@ -21,7 +21,8 @@ setup(
     entry_points={
         'console_scripts': [
             'build_circuit = neato_kart.build_circuit:main',
-            'detect_april_tag = neato_kart.detect_april_tag:main'
+            'detect_april_tag = neato_kart.detect_april_tag:main',
+            'create_map = neato_kart.create_map:main'
         ],
     },
 )
