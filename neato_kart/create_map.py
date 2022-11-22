@@ -68,6 +68,9 @@ class CreateMap(Node):
         self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
 
     def process_odom(self, msg):
+        if (self.record_done):
+            return
+            
         translation = msg.pose.pose.position
         rotation = msg.pose.pose.orientation
         
@@ -118,17 +121,18 @@ class CreateMap(Node):
                 self.map_origin = self.current_pose
                 print(self.map_origin.theta)
             elif self.map_origin != None:
-                
                 self.record_done = True
-    
+
     def save_map_to_json(self):
         with open(self.map_path, 'w') as outfile:
             for p in self.point_list:
-                json_object = p.toJSON()
-                outfile.write(json_object)
+                dict = p.toDict()
+                json.dump(dict, outfile)
+                outfile.write("\n")
             for t in self.tag_list:
-                json_object = t.toJSON()
-                outfile.write(json_object)
+                dict = t.toDict()
+                json.dump(dict, outfile)
+                outfile.write("\n")
 
     def run_loop(self):
         if not self.cv_image is None:

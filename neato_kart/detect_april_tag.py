@@ -27,9 +27,16 @@ class MapPoint():
     
     def get_distance(self):
         return math.sqrt(self.x**2 + self.y**2)
-    
-    def toJSON(self):
-        return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
+
+    def toDict(self):
+        new_dict = {}
+        new_dict["x"] = self.x
+        new_dict["y"] = self.y
+        new_dict["theta"] = self.theta
+        new_dict["istag"] = self.istag
+        new_dict["tagid"] = self.tagid
+
+        return new_dict
 
 def draw_apriltag(detected_image, r):
     (ptA, ptB, ptC, ptD) = r.corners
