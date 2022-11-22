@@ -10,30 +10,40 @@ import cv2
 import os
 import dt_apriltags as apriltag
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, TransformStamped, Transform
-from neato_kart.detect_april_tag import MapPoint
+from neato_kart.detect_april_tag import MapPoint, get_tag_2d_pose
 from neato_kart.angle_helpers import euler_from_quaternion
 import numpy as np
 import PyKDL
 import math
+import json
 
 class CreateMap(Node):
     def __init__(self, image_topic):
         super().__init__('create_map')
 
-        self.isVideo = True
+        self.record_done = False
+
+        self.isVideo = False
         self.video_name = "april_tag_test3.avi"
+
+        self.map_name = "test1.json"
+        self.map_path = os.path.dirname(os.path.realpath(__file__))
+        self.map_path = os.path.abspath(os.path.join(self.map_path, os.pardir))
+        self.map_path = os.path.join(self.map_path, 'maps', self.map_name)
 
         self.detector = apriltag.Detector(families="tag36h11", nthreads=2)
         self.camera_param = [971.646825, 972.962863, 501.846472, 402.829241]
 
         self.current_pose = None
         self.map_origin = None
-        self.added_tag_id = {}
-        self.checkpoint_list = []
+        self.added_tag_id = set()
+        self.tag_list = []
         self.point_list = []
 
         self.move_distance = 0.0
-        self.required_distance = 2.0
+        self.point_required_distance = 0.5
+
+        self.tag_required_distance = 1.0
 
         self.cv_image = None                        # the latest image from the camera
         self.image_num = 0                          # image frame number
@@ -55,8 +65,7 @@ class CreateMap(Node):
     def process_image(self, msg):
         """ Process image messages from ROS and stash them in an attribute
             called cv_image for subsequent processing """
-        # self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
-        self.timestamp = msg.header.stamp
+        self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
 
     def process_odom(self, msg):
         translation = msg.pose.pose.position
@@ -71,14 +80,17 @@ class CreateMap(Node):
 
         if self.current_pose != None and self.map_origin != None:
             self.move_distance += math.dist((new_pose.x, new_pose.y), (self.current_pose.x, self.current_pose.y))
-            if self.move_distance > self.required_distance:
+            if self.move_distance > self.point_required_distance:
                 t_current_odom = new_pose.as_matrix()
+                print(t_current_odom)
                 t_origin_odom = self.map_origin.as_matrix()
                 t_current_origin = np.dot(t_origin_odom.getI(), t_current_odom)
+                print(t_current_origin)
                 new_map_pose = MapPoint()
                 new_map_pose.from_matrix(t_current_origin)
                 self.point_list.append(new_map_pose)
                 self.move_distance = 0.0
+                print("new point recorded")
         self.current_pose = new_pose
         #print(self.current_pose)
 
@@ -87,12 +99,36 @@ class CreateMap(Node):
             We are using a separate thread to run the loop_wrapper to work around
             issues with single threaded executors in ROS2 """
         cv2.namedWindow('video_window')
+        cv2.setMouseCallback('video_window', self.process_mouse_event)
         while True:
             if self.isVideo:
                 ret, frame = self.cap.read()
                 self.cv_image = frame
             self.run_loop()
+            if self.record_done:
+                self.save_map_to_json()
+                cv2.destroyAllWindows()
+                return
             time.sleep(0.1)
+
+    def process_mouse_event(self, event, x,y,flags,param):
+        """ """
+        if event == cv2.EVENT_LBUTTONDOWN:
+            if (self.current_pose != None and self.map_origin == None):
+                self.map_origin = self.current_pose
+                print(self.map_origin.theta)
+            elif self.map_origin != None:
+                
+                self.record_done = True
+    
+    def save_map_to_json(self):
+        with open(self.map_path, 'w') as outfile:
+            for p in self.point_list:
+                json_object = p.toJSON()
+                outfile.write(json_object)
+            for t in self.tag_list:
+                json_object = t.toJSON()
+                outfile.write(json_object)
 
     def run_loop(self):
         if not self.cv_image is None:
@@ -102,6 +138,20 @@ class CreateMap(Node):
             detected_image = self.cv_image.copy()
             for r in results:
                 # check if the tag is already added, check tag distance from robot, and then add when angle isn't too stiff
+                if r.tag_id not in self.added_tag_id and self.map_origin != None and self.current_pose != None:
+                    tag_to_base_pose = get_tag_2d_pose(r)
+                    if tag_to_base_pose.get_distance() < self.tag_required_distance:
+                        if tag_to_base_pose.theta > -2.35 and tag_to_base_pose.theta < -0.78:
+                            t_tag_current = tag_to_base_pose.as_matrix()
+                            t_current_odom = self.current_pose.as_matrix()
+                            t_origin_odom = self.map_origin.as_matrix()
+                            t_tag_odom = np.dot(t_current_odom, t_tag_current)
+                            t_tag_origin = np.dot(t_origin_odom.getI(), t_tag_odom)
+                            new_tag_pose = MapPoint(istag=True, tagid = r.tag_id)
+                            new_tag_pose.from_matrix(t_tag_origin)
+                            self.tag_list.append(new_tag_pose)
+                            self.added_tag_id.add(r.tag_id)
+                            print("new tag has been recorded")
                 pass
 
             cv2.imshow('video_window', detected_image)
