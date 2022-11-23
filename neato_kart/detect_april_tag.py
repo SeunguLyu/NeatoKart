@@ -28,15 +28,23 @@ class MapPoint():
     def get_distance(self):
         return math.sqrt(self.x**2 + self.y**2)
 
-    def toDict(self):
-        new_dict = {}
-        new_dict["x"] = self.x
-        new_dict["y"] = self.y
-        new_dict["theta"] = self.theta
-        new_dict["istag"] = self.istag
-        new_dict["tagid"] = self.tagid
+    def to_dict(self):
+        dict = {}
+        dict["x"] = self.x
+        dict["y"] = self.y
+        dict["theta"] = self.theta
+        dict["istag"] = self.istag
+        dict["tagid"] = self.tagid
 
-        return new_dict
+        return dict
+    
+    def from_dict(self, dict):
+        self.x = dict["x"]
+        self.y = dict["y"]
+        self.theta = dict["theta"]
+        self.istag = dict["istag"]
+        self.tagid = dict["tagid"]
+
 
 def draw_apriltag(detected_image, r):
     (ptA, ptB, ptC, ptD) = r.corners

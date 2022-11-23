@@ -22,7 +22,8 @@ setup(
         'console_scripts': [
             'build_circuit = neato_kart.build_circuit:main',
             'create_map = neato_kart.create_map:main',
-            'map_node = neato_kart.map_node:main'
+            'map_node = neato_kart.map_node:main',
+            'drive_neato = neato_kart.drive_neato:main'
         ],
     },
 )

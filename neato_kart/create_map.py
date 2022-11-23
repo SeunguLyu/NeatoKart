@@ -46,7 +46,6 @@ class CreateMap(Node):
         self.tag_required_distance = 1.0
 
         self.cv_image = None                        # the latest image from the camera
-        self.image_num = 0                          # image frame number
         self.bridge = CvBridge()                    # used to convert ROS messages to OpenCV
 
         if self.isVideo:
@@ -72,7 +71,6 @@ class CreateMap(Node):
             return
             
         translation = msg.pose.pose.position
-        rotation = msg.pose.pose.orientation
         
         orientation_tuple = (msg.pose.pose.orientation.x,
                              msg.pose.pose.orientation.y,
@@ -126,11 +124,11 @@ class CreateMap(Node):
     def save_map_to_json(self):
         with open(self.map_path, 'w') as outfile:
             for p in self.point_list:
-                dict = p.toDict()
+                dict = p.to_dict()
                 json.dump(dict, outfile)
                 outfile.write("\n")
             for t in self.tag_list:
-                dict = t.toDict()
+                dict = t.to_dict()
                 json.dump(dict, outfile)
                 outfile.write("\n")
 
@@ -144,19 +142,17 @@ class CreateMap(Node):
                 # check if the tag is already added, check tag distance from robot, and then add when angle isn't too stiff
                 if r.tag_id not in self.added_tag_id and self.map_origin != None and self.current_pose != None:
                     tag_to_base_pose = get_tag_2d_pose(r)
-                    if tag_to_base_pose.get_distance() < self.tag_required_distance:
-                        if tag_to_base_pose.theta > -2.35 and tag_to_base_pose.theta < -0.78:
-                            t_tag_current = tag_to_base_pose.as_matrix()
-                            t_current_odom = self.current_pose.as_matrix()
-                            t_origin_odom = self.map_origin.as_matrix()
-                            t_tag_odom = np.dot(t_current_odom, t_tag_current)
-                            t_tag_origin = np.dot(t_origin_odom.getI(), t_tag_odom)
-                            new_tag_pose = MapPoint(istag=True, tagid = r.tag_id)
-                            new_tag_pose.from_matrix(t_tag_origin)
-                            self.tag_list.append(new_tag_pose)
-                            self.added_tag_id.add(r.tag_id)
-                            print("new tag has been recorded")
-                pass
+                    if tag_to_base_pose.get_distance() < self.tag_required_distance and (tag_to_base_pose.theta > -2.35 and tag_to_base_pose.theta < -0.78):
+                        t_tag_current = tag_to_base_pose.as_matrix()
+                        t_current_odom = self.current_pose.as_matrix()
+                        t_origin_odom = self.map_origin.as_matrix()
+                        t_tag_odom = np.dot(t_current_odom, t_tag_current)
+                        t_tag_origin = np.dot(t_origin_odom.getI(), t_tag_odom)
+                        new_tag_pose = MapPoint(istag=True, tagid = r.tag_id)
+                        new_tag_pose.from_matrix(t_tag_origin)
+                        self.tag_list.append(new_tag_pose)
+                        self.added_tag_id.add(r.tag_id)
+                        print("new tag has been recorded")
 
             cv2.imshow('video_window', detected_image)
             cv2.waitKey(5)

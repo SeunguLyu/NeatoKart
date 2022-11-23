@@ -3,21 +3,11 @@ from rclpy.time import Time
 from threading import Thread
 from rclpy.node import Node
 import time
-from sensor_msgs.msg import Image
-from nav_msgs.msg import Odometry
-from cv_bridge import CvBridge
-import cv2
 import os
-import dt_apriltags as apriltag
-from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, TransformStamped, Transform
-from neato_kart.detect_april_tag import MapPoint, get_tag_2d_pose
-from neato_kart.angle_helpers import euler_from_quaternion
-import numpy as np
-import PyKDL
-import math
+from neato_kart.detect_april_tag import MapPoint
 import json
 
-class MapIndo():
+class MapInfo():
     def __init__(self, tag_list = [], point_list = [], item_list = []):
         self.tag_list = tag_list
         self.point_list = point_list
@@ -34,6 +24,10 @@ class MapNode(Node):
 
         self.tag_list = []
         self.point_list = []
+        self.item_list = []
+
+        self.map_info = MapInfo(self.tag_list, self.point_list, self.item_list)
+        #self.map_pub = self.create_publisher(MapInfo, 'map_info', 10)
 
         self.load_map_from_json()
 
@@ -55,9 +49,15 @@ class MapNode(Node):
                 data.append(json.loads(line))
 
         for d in data:
-            print(d["x"], d["y"], d["theta"], d["istag"])
+            map_point = MapPoint()
+            map_point.from_dict(d)
+            if map_point.istag:
+                self.tag_list.append(map_point)
+            else:
+                self.point_list.append(map_point)
 
     def run_loop(self):
+        #self.map_pub.publish(self.map_info)
         pass
 
 if __name__ == '__main__':
