@@ -60,10 +60,7 @@ class DriveNeato(Node):
             called cv_image for subsequent processing """
         self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
 
-    def process_odom(self, msg):
-        if (self.record_done):
-            return
-            
+    def process_odom(self, msg):       
         translation = msg.pose.pose.position
         
         orientation_tuple = (msg.pose.pose.orientation.x,

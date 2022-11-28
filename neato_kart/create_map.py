@@ -10,7 +10,7 @@ import cv2
 import os
 import dt_apriltags as apriltag
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, TransformStamped, Transform
-from neato_kart.detect_april_tag import MapPoint, get_tag_2d_pose
+from neato_kart.detect_april_tag import MapPoint, get_tag_2d_pose, draw_apriltag
 from neato_kart.angle_helpers import euler_from_quaternion
 import numpy as np
 import PyKDL
@@ -26,7 +26,7 @@ class CreateMap(Node):
         self.isVideo = False
         self.video_name = "april_tag_test3.avi"
 
-        self.map_name = "test1.json"
+        self.map_name = "test3.json"
         self.map_path = os.path.dirname(os.path.realpath(__file__))
         self.map_path = os.path.abspath(os.path.join(self.map_path, os.pardir))
         self.map_path = os.path.join(self.map_path, 'maps', self.map_name)
@@ -83,10 +83,10 @@ class CreateMap(Node):
             self.move_distance += math.dist((new_pose.x, new_pose.y), (self.current_pose.x, self.current_pose.y))
             if self.move_distance > self.point_required_distance:
                 t_current_odom = new_pose.as_matrix()
-                print(t_current_odom)
+                #print(t_current_odom)
                 t_origin_odom = self.map_origin.as_matrix()
                 t_current_origin = np.dot(t_origin_odom.getI(), t_current_odom)
-                print(t_current_origin)
+                #print(t_current_origin)
                 new_map_pose = MapPoint()
                 new_map_pose.from_matrix(t_current_origin)
                 self.point_list.append(new_map_pose)
@@ -117,7 +117,7 @@ class CreateMap(Node):
         if event == cv2.EVENT_LBUTTONDOWN:
             if (self.current_pose != None and self.map_origin == None):
                 self.map_origin = self.current_pose
-                print(self.map_origin.theta)
+                print("Record Started")
             elif self.map_origin != None:
                 self.record_done = True
 
@@ -136,13 +136,16 @@ class CreateMap(Node):
         if not self.cv_image is None:
             gray = cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2GRAY)
             results = self.detector.detect(gray, estimate_tag_pose = True, camera_params=self.camera_param, tag_size = 0.09)
-
+        
             detected_image = self.cv_image.copy()
+            
+            
             for r in results:
                 # check if the tag is already added, check tag distance from robot, and then add when angle isn't too stiff
+                draw_apriltag(detected_image, r)
                 if r.tag_id not in self.added_tag_id and self.map_origin != None and self.current_pose != None:
                     tag_to_base_pose = get_tag_2d_pose(r)
-                    if tag_to_base_pose.get_distance() < self.tag_required_distance and (tag_to_base_pose.theta > -2.35 and tag_to_base_pose.theta < -0.78):
+                    if tag_to_base_pose.get_distance() < self.tag_required_distance:
                         t_tag_current = tag_to_base_pose.as_matrix()
                         t_current_odom = self.current_pose.as_matrix()
                         t_origin_odom = self.map_origin.as_matrix()
