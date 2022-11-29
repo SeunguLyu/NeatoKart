@@ -22,7 +22,7 @@ class DriveNeato(Node):
     def __init__(self, image_topic):
         super().__init__('drive_neato')
 
-        self.map_name = "test1.json"
+        self.map_name = "test5.json"
         self.map_path = os.path.dirname(os.path.realpath(__file__))
         self.map_path = os.path.abspath(os.path.join(self.map_path, os.pardir))
         self.map_path = os.path.join(self.map_path, 'maps', self.map_name)
@@ -30,17 +30,17 @@ class DriveNeato(Node):
         self.detector = apriltag.Detector(families="tag36h11", nthreads=2)
         self.camera_param = [971.646825, 972.962863, 501.846472, 402.829241]
 
-        self.tag_required_distance = 1.0
+        self.tag_required_distance = 3.0
 
         self.current_pose = None
         self.map_origin = None
-        self.map_tag_list = [MapPoint]
-        self.map_point_list = [MapPoint]
-        self.map_item_list = [MapPoint]
+        self.map_tag_list = []
+        self.map_point_list = []
+        self.map_item_list = []
 
-        self.odom_tag_list = [MapPoint]
-        self.odom_point_list = [MapPoint]
-        self.odom_item_list = [MapPoint]
+        self.odom_tag_list = []
+        self.odom_point_list = []
+        self.odom_item_list = []
 
         self.cv_image = None                        # the latest image from the camera
         self.bridge = CvBridge()                    # used to convert ROS messages to OpenCV
@@ -119,10 +119,10 @@ class DriveNeato(Node):
                     if tag.tagid == r.tag_id:
                         current_tag = tag
                         break
-
+                
                 if self.current_pose != None and current_tag != None:
                     tag_to_base_pose = get_tag_2d_pose(r)
-                    if tag_to_base_pose.get_distance() < self.tag_required_distance and (tag_to_base_pose.theta > -2.35 and tag_to_base_pose.theta < -0.78):
+                    if tag_to_base_pose.get_distance() < self.tag_required_distance:
                         t_tag_current = tag_to_base_pose.as_matrix()
                         t_current_odom = self.current_pose.as_matrix()
                         t_tag_origin = current_tag.as_matrix()
@@ -133,6 +133,7 @@ class DriveNeato(Node):
                         self.map_origin = new_origin_pose
 
                         self.update_map_in_odom()
+                        break
 
             cv2.imshow('video_window', detected_image)
             cv2.waitKey(5)
@@ -159,6 +160,10 @@ class DriveNeato(Node):
         self.odom_tag_list = tags
         self.odom_point_list = points
 
+        #print("Updated map in odom")
+
+        self.draw_map_in_odom()
+
     def draw_map_in_odom(self):
         if self.odom_point_list != None and self.odom_tag_list != None:
             marker_array = MarkerArray()
@@ -171,6 +176,9 @@ class DriveNeato(Node):
                 marker = self.create_map_marker(point_pose, marker_id)
                 marker_array.markers.append(marker)
                 marker_id += 1
+            
+                #print("Draw map in odom")
+            self.pub_marker.publish(marker_array)
 
     def create_map_marker(self, map_pose: MapPoint, id: int) -> Marker:
         marker = Marker()

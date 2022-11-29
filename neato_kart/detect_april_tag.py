@@ -85,7 +85,13 @@ def get_tag_2d_pose(r):
                         t_tag_base[2,0], t_tag_base[2,1], t_tag_base[2,2])
 
     angle = rot.GetEulerZYX()
+    
+    yaw = angle[0]
+    if (yaw> 0):
+        yaw = yaw - math.pi
 
-    pose_to_base = MapPoint(t_tag_base[0,3], t_tag_base[1,3], angle[0], True)
+    print(angle[0])
+
+    pose_to_base = MapPoint(t_tag_base[0,3], t_tag_base[1,3], yaw, True)
 
     return pose_to_base

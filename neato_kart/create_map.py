@@ -26,7 +26,7 @@ class CreateMap(Node):
         self.isVideo = False
         self.video_name = "april_tag_test3.avi"
 
-        self.map_name = "test3.json"
+        self.map_name = "test5.json"
         self.map_path = os.path.dirname(os.path.realpath(__file__))
         self.map_path = os.path.abspath(os.path.join(self.map_path, os.pardir))
         self.map_path = os.path.join(self.map_path, 'maps', self.map_name)
