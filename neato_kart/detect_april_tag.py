@@ -84,11 +84,10 @@ def get_tag_2d_pose(r):
                         t_tag_base[1,0], t_tag_base[1,1], t_tag_base[1,2],
                         t_tag_base[2,0], t_tag_base[2,1], t_tag_base[2,2])
 
+    #print(np.arctan2(t_tag_base[1,2], t_tag_base[0,2]))
     angle = rot.GetEulerZYX()
     
-    yaw = angle[0]
-
-    #print(yaw)
+    yaw = np.arctan2(t_tag_base[1,2], t_tag_base[0,2])
 
     pose_to_base = MapPoint(t_tag_base[0,3], t_tag_base[1,3], yaw, True)
 

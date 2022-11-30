@@ -22,7 +22,7 @@ class DriveNeato(Node):
     def __init__(self, image_topic):
         super().__init__('drive_neato')
 
-        self.map_name = "test5.json"
+        self.map_name = "test7.json"
         self.map_path = os.path.dirname(os.path.realpath(__file__))
         self.map_path = os.path.abspath(os.path.join(self.map_path, os.pardir))
         self.map_path = os.path.join(self.map_path, 'maps', self.map_name)
