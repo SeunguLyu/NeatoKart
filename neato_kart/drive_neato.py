@@ -22,7 +22,7 @@ class DriveNeato(Node):
     def __init__(self, image_topic):
         super().__init__('drive_neato')
 
-        self.map_name = "test7.json"
+        self.map_name = "test8.json"
         self.map_path = os.path.dirname(os.path.realpath(__file__))
         self.map_path = os.path.abspath(os.path.join(self.map_path, os.pardir))
         self.map_path = os.path.join(self.map_path, 'maps', self.map_name)
@@ -41,6 +41,10 @@ class DriveNeato(Node):
         self.odom_tag_list = []
         self.odom_point_list = []
         self.odom_item_list = []
+
+        self.base_tag_list = []
+        self.base_point_list = []
+        self.base_item_list = []
 
         self.cv_image = None                        # the latest image from the camera
         self.bridge = CvBridge()                    # used to convert ROS messages to OpenCV
@@ -80,6 +84,8 @@ class DriveNeato(Node):
         #cv2.setMouseCallback('video_window', self.process_mouse_event)
         while True:
             self.run_loop()
+            if (self.odom_point_list != None):
+                self.update_map_in_base()
             time.sleep(0.1)
 
     # def process_mouse_event(self, event, x,y,flags,param):
@@ -179,6 +185,29 @@ class DriveNeato(Node):
             
                 #print("Draw map in odom")
             self.pub_marker.publish(marker_array)
+
+    def update_map_in_base(self):
+        points = []
+        tags = []
+        for tag_pose in self.odom_tag_list:
+            t_tag_odom = tag_pose.as_matrix()
+            t_base_odom = self.current_pose.as_matrix()
+            t_tag_base = np.dot(t_base_odom.getI(), t_tag_odom)
+            base_tag_pose = MapPoint(istag=True, tagid=tag_pose.tagid)
+            base_tag_pose.from_matrix(t_tag_base)
+            tags.append(base_tag_pose)
+        
+        for point_pose in self.odom_point_list:
+            t_point_odom = point_pose.as_matrix()
+            t_base_odom = self.current_pose.as_matrix()
+            t_point_base = np.dot(t_base_odom.getI(), t_point_odom)
+            base_point_pose = MapPoint()
+            base_point_pose.from_matrix(t_point_base)
+            points.append(base_point_pose)
+            #print(base_point_pose)
+
+        self.base_tag_list = tags
+        self.base_point_list = points
 
     def create_map_marker(self, map_pose: MapPoint, id: int) -> Marker:
         marker = Marker()
