@@ -37,6 +37,8 @@ class GameNode(Node):
         self.cv_robot2 = None
         self.bridge = CvBridge()
 
+        self.game_start = False
+
         self.item_list = []
 
         thread = Thread(target=self.loop_wrapper)
@@ -59,8 +61,8 @@ class GameNode(Node):
         pygame.init()
         
         # Game Setup
-        WINDOW_WIDTH = 1024 * 2 + 10
-        WINDOW_HEIGHT = 768
+        WINDOW_WIDTH = 1920
+        WINDOW_HEIGHT = 714
         
         self.display = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
         pygame.display.set_caption('Neato Kart')
@@ -72,6 +74,7 @@ class GameNode(Node):
         keys = pygame.key.get_pressed()
 
         self.set_robot1_velocity(keys)
+        self.set_robot2_velocity(keys)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -80,16 +83,17 @@ class GameNode(Node):
 
         if not self.cv_robot1 is None:
             pygame_image = self.convert_opencv_img_to_pygame(self.cv_robot1)
+            pygame_image = pygame.transform.scale(pygame_image, (952, 714))
 
             # #Draw image
             self.display.blit(pygame_image, (0, 0))
             pygame.display.update()
 
-        if not self.cv_robot1 is None:
-            pygame_image = self.convert_opencv_img_to_pygame(self.cv_robot1)
+        if not self.cv_robot2 is None:
+            pygame_image = self.convert_opencv_img_to_pygame(self.cv_robot2)
 
             # #Draw image
-            self.display.blit(pygame_image, (1024 + 10, 0))
+            self.display.blit(pygame_image, (952 + 16, 0))
             pygame.display.update()
 
     def convert_opencv_img_to_pygame(self, opencv_image):
@@ -107,15 +111,33 @@ class GameNode(Node):
             linear_vel += 0.3
         if keys[pygame.K_s]:
             linear_vel -= 0.3
-        if keys[pygame.K_a]:
+        if keys[pygame.K_a] and linear_vel != 0:
             ang_vel += 0.3
-        if keys[pygame.K_d]:
+        if keys[pygame.K_d] and linear_vel != 0:
             ang_vel -= 0.3
         twt = Twist()
         twt.angular.z = ang_vel
         twt.linear.x = linear_vel
 
         self.pub_robot1_vel.publish(twt)
+
+    def set_robot2_velocity(self, keys):
+        linear_vel = 0.0
+        ang_vel = 0.0
+
+        if keys[pygame.K_UP]:
+            linear_vel += 0.3
+        if keys[pygame.K_DOWN]:
+            linear_vel -= 0.3
+        if keys[pygame.K_LEFT] and linear_vel != 0:
+            ang_vel += 0.3
+        if keys[pygame.K_RIGHT] and linear_vel != 0:
+            ang_vel -= 0.3
+        twt = Twist()
+        twt.angular.z = ang_vel
+        twt.linear.x = linear_vel
+
+        self.pub_robot2_vel.publish(twt)
 
 def main(args=None):
     rclpy.init()
