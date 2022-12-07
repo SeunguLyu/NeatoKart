@@ -25,10 +25,10 @@ class GameNode(Node):
         if robot1_name != "":
             robot1_name += "/"
 
-        robot2_name + "/"
+        robot2_name += "/"
 
         self.create_subscription(Image, robot1_name + "processed_image", self.process_robot1_image, 10)
-        self.create_subscription(Image, robot2_name + "processed_image", self.process_robot1_image, 10)
+        self.create_subscription(Image, robot2_name + "processed_image", self.process_robot2_image, 10)
 
         self.pub_robot1_vel = self.create_publisher(Twist, robot1_name + 'cmd_vel', 10)
         self.pub_robot2_vel = self.create_publisher(Twist, robot2_name + 'cmd_vel', 10)
@@ -91,6 +91,7 @@ class GameNode(Node):
 
         if not self.cv_robot2 is None:
             pygame_image = self.convert_opencv_img_to_pygame(self.cv_robot2)
+            pygame_image = pygame.transform.scale(pygame_image, (952, 714))
 
             # #Draw image
             self.display.blit(pygame_image, (952 + 16, 0))
