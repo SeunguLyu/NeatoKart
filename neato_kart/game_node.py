@@ -146,6 +146,7 @@ class GameNode(Node):
 
             # #Draw image
             self.display.blit(pygame_image, (952 + 16, 0))
+            self.draw_map_at_point((730 + 952,510))
 
         if self.game_state == GameState.GAME_STOP:
             if keys[pygame.K_SPACE]:
@@ -199,9 +200,9 @@ class GameNode(Node):
         if keys[pygame.K_s]:
             linear_vel -= 0.3
         if keys[pygame.K_a] and linear_vel != 0:
-            ang_vel += 0.3
+            ang_vel += 1.0
         if keys[pygame.K_d] and linear_vel != 0:
-            ang_vel -= 0.3
+            ang_vel -= 1.0
         twt = Twist()
         twt.angular.z = ang_vel
         twt.linear.x = linear_vel
@@ -217,9 +218,9 @@ class GameNode(Node):
         if keys[pygame.K_DOWN]:
             linear_vel -= 0.3
         if keys[pygame.K_LEFT] and linear_vel != 0:
-            ang_vel += 0.3
+            ang_vel += 1.0
         if keys[pygame.K_RIGHT] and linear_vel != 0:
-            ang_vel -= 0.3
+            ang_vel -= 1.0
         twt = Twist()
         twt.angular.z = ang_vel
         twt.linear.x = linear_vel
@@ -279,6 +280,7 @@ class GameNode(Node):
             point_y = map_center[1] - point.x * self.map_multiplier
 
             point_list.append((point_x, point_y))
+            pygame.draw.circle(self.display, (200, 200, 200, 200), (point_x, point_y), 7.5)
 
         pygame.draw.lines(self.display, (200, 200, 200, 200), False, point_list, 15)
         
