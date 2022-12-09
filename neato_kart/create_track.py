@@ -110,41 +110,47 @@ class CreateTrack():
         # calculate pixel coords from base link coords
         pixel_coords = []
         w = []
-        passed = []
-        for waypoint in self.waypoints:
-            waypoint = [waypoint.x, waypoint.y, 0, 1]
-            w.append(waypoint)
 
-            cam_waypoint = np.dot(np.linalg.inv(t_cam_base), waypoint)
-            cam_waypoint = np.delete(cam_waypoint, -1)
-            pixel_coord_unnorm = np.dot(K, cam_waypoint.T)
-            pixel_coord_norm = np.divide(pixel_coord_unnorm, pixel_coord_unnorm[-1]) 
+        if len(self.waypoints) != 0:
+            first_point = (int(self.waypoints[0].x), int(self.waypoints[0].y))
 
-            # store all the pixels
-            pixel_coords.append(pixel_coord_norm)
+            for waypoint in self.waypoints:
+                waypoint = [waypoint.x, waypoint.y, 0, 1]
+                w.append(waypoint)
 
-            # print cx, cy to check the opencv dim
-            cx = track_image.shape[0]
-            cy = track_image.shape[1]
-            px = pixel_coord_norm[0]
-            py = pixel_coord_norm[1]
+                cam_waypoint = np.dot(np.linalg.inv(t_cam_base), waypoint)
+                cam_waypoint = np.delete(cam_waypoint, -1)
+                pixel_coord_unnorm = np.dot(K, cam_waypoint.T)
+                pixel_coord_norm = np.divide(pixel_coord_unnorm, pixel_coord_unnorm[-1]) 
 
-            # Center coordinates
-            center_coordinates = (int(px), int(py))
-            
-            # Radius of circle
-            radius = 3
-            
-            # Blue color in BGR
-            color = (255, 0, 0)
-            
-            # Line thickness of 2 px
-            thickness = 2
-            
-            # Using cv2.circle() method
-            # Draw a circle with blue line borders of thickness of 2 px
-            track_image = cv2.circle(track_image, center_coordinates, radius, color, thickness) 
-            
+                # store all the pixels
+                pixel_coords.append(pixel_coord_norm)
+
+                # print cx, cy to check the opencv dim
+                cx = track_image.shape[0]
+                cy = track_image.shape[1]
+                px = pixel_coord_norm[0]
+                py = pixel_coord_norm[1]
+
+                # Center coordinates
+                center_coordinates = (int(px), int(py))
+                
+                # Radius of circle
+                radius = 3
+                
+                # Blue color in BGR
+                color = (255, 0, 0)
+                
+                # Line thickness of 2 px
+                thickness = 2
+                
+                # Using cv2.circle() method
+                # Draw a circle with blue line borders of thickness of 2 px
+                track_image = cv2.circle(track_image, center_coordinates, radius, color, thickness) 
+                track_image = cv2.line(track_image, first_point, center_coordinates, color, thickness)
+                
+                first_point = center_coordinates
+
         print("W: ", w)
         return track_image
 
