@@ -10,8 +10,9 @@ import os
 import pygame
 import sys
 from neato_kart.detect_april_tag import MapPoint
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, Pose2D
 from enum import Enum
+import json
 
 class GameState(Enum):
     GAME_STOP = 1
@@ -41,6 +42,8 @@ class GameNode(Node):
         self.create_subscription(Image, robot1_name + "processed_image", self.process_robot1_image, 10)
         self.create_subscription(Image, robot2_name + "processed_image", self.process_robot2_image, 10)
 
+        self.create_subscription(Pose2D, robot1_name + "map_position", self.process_robot1_position, 10)
+
         self.pub_robot1_vel = self.create_publisher(Twist, robot1_name + 'cmd_vel', 10)
         self.pub_robot2_vel = self.create_publisher(Twist, robot2_name + 'cmd_vel', 10)
 
@@ -51,7 +54,22 @@ class GameNode(Node):
         self.game_start = False
         self.game_tick = 0
 
+        self.map_name = "draw_map_test.json"
+        self.map_path = os.path.dirname(os.path.realpath(__file__))
+        self.map_path = os.path.abspath(os.path.join(self.map_path, os.pardir))
+        self.map_path = os.path.join(self.map_path, 'maps', self.map_name)
+
+        self.map_size = 200
+        self.map_multiplier = 0.0
+        self.map_center_offset = (0,0)
+
         self.item_list = []
+        self.map_tag_list = []
+        self.map_point_list = []
+
+        self.robot1_position = None
+
+        self.load_map_from_json()
 
         self.game_state = GameState.GAME_STOP
 
@@ -67,6 +85,9 @@ class GameNode(Node):
         """ Process image messages from ROS and stash them in an attribute
             called cv_image for subsequent processing """
         self.cv_robot2 = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+
+    def process_robot1_position(self, msg):
+        self.robot1_position = msg
 
     def loop_wrapper(self):
         """ This function takes care of calling the run_loop function repeatedly.
@@ -117,6 +138,7 @@ class GameNode(Node):
 
             # #Draw image
             self.display.blit(pygame_image, (0, 0))
+            self.draw_map_at_point((730,510))
 
         if not self.cv_robot2 is None:
             pygame_image = self.convert_opencv_img_to_pygame(self.cv_robot2)
@@ -129,8 +151,7 @@ class GameNode(Node):
             if keys[pygame.K_SPACE]:
                 self.game_state = GameState.GAME_COUNT
                 pygame.mixer.Sound.play(self.start_sound)
-                self.game_tick = pygame.time.get_ticks()
-                
+                self.game_tick = pygame.time.get_ticks()       
         elif self.game_state == GameState.GAME_COUNT:
             if pygame.time.get_ticks() < self.game_tick + 500:
                 pass
@@ -158,7 +179,8 @@ class GameNode(Node):
                 pygame.mixer.music.play(-1)
                 self.game_state = GameState.GAME_PLAY
                 self.game_tick = pygame.time.get_ticks()
-            
+        
+        
         pygame.display.update()
 
     def convert_opencv_img_to_pygame(self, opencv_image):
@@ -203,6 +225,74 @@ class GameNode(Node):
         twt.linear.x = linear_vel
 
         self.pub_robot2_vel.publish(twt)
+
+    def load_map_from_json(self):
+        data = []
+        with open(self.map_path) as f:
+            for line in f:
+                data.append(json.loads(line))
+
+        low_x = 0
+        low_y = 0
+        high_x = 0
+        high_y = 0
+
+        for d in data:
+            map_point = MapPoint()
+            map_point.from_dict(d)
+            if map_point.istag:
+                self.map_tag_list.append(map_point)
+            else:
+                self.map_point_list.append(map_point)
+
+            if map_point.x > high_y:
+                high_y = map_point.x
+            if map_point.x < low_y:
+                low_y = map_point.x
+            
+            if -map_point.y > high_x:
+                high_x = map_point.x
+            if -map_point.y < low_x:
+                low_x = map_point.x
+
+        #print(high_x - low_x)
+        #print(high_y - low_y)
+        
+        if high_x - low_x > high_y - low_y:
+            self.map_multiplier = self.map_size/(high_x - low_x)
+        else:
+            self.map_multiplier = self.map_size/(high_y - low_y)
+
+        x_offset = -low_x * self.map_multiplier - self.map_size/2.0
+        y_offset = low_y * self.map_multiplier + self.map_size/2.0
+        self.map_center_offset = (x_offset, y_offset)
+        #print(self.map_center_offset)
+    
+    def draw_map_at_point(self, center):
+        map_center = (center[0] + self.map_center_offset[0], center[1] + self.map_center_offset[1])
+
+        point_list = []
+        point_list.append(map_center)
+
+        for point in self.map_point_list:
+            point_x = map_center[0] - point.y * self.map_multiplier
+            point_y = map_center[1] - point.x * self.map_multiplier
+
+            point_list.append((point_x, point_y))
+
+        pygame.draw.lines(self.display, (200, 200, 200, 200), False, point_list, 15)
+        
+        for tag in self.map_tag_list:
+            point_x = map_center[0] - tag.y * self.map_multiplier
+            point_y = map_center[1] - tag.x * self.map_multiplier
+
+            pygame.draw.circle(self.display, (0,255,0), (point_x, point_y), 5.0)
+
+        if (self.robot1_position != None):
+            point_x = map_center[0] - self.robot1_position.y * self.map_multiplier
+            point_y = map_center[1] - self.robot1_position.x * self.map_multiplier
+
+            pygame.draw.circle(self.display, (0,0,255), (point_x, point_y), 10.0)
 
 def main(args=None):
     rclpy.init()

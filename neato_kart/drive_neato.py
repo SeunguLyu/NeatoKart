@@ -9,7 +9,7 @@ from cv_bridge import CvBridge
 import cv2
 import os
 import dt_apriltags as apriltag
-from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, TransformStamped, Transform
+from geometry_msgs.msg import PoseStamped, Pose2D, Point, Quaternion, TransformStamped, Transform
 from neato_kart.detect_april_tag import MapPoint, get_tag_2d_pose, draw_apriltag
 from neato_kart.angle_helpers import euler_from_quaternion
 import numpy as np
@@ -28,7 +28,7 @@ class DriveNeato(Node):
         self.declare_parameter('robot_name', '')
         robot_name = self.get_parameter('robot_name').get_parameter_value().string_value
 
-        self.map_name = "test8.json"
+        self.map_name = "draw_map_test.json"
         self.map_path = os.path.dirname(os.path.realpath(__file__))
         self.map_path = os.path.abspath(os.path.join(self.map_path, os.pardir))
         self.map_path = os.path.join(self.map_path, 'maps', self.map_name)
@@ -66,6 +66,8 @@ class DriveNeato(Node):
         self.pub_marker = self.create_publisher(MarkerArray, robot_name + 'map_markers', 10)
         self.pub_image = self.create_publisher(Image, robot_name + "processed_image", 10)
 
+        self.pub_position_in_map = self.create_publisher(Pose2D, robot_name + "map_position", 10)
+
         thread = Thread(target=self.loop_wrapper)
         thread.start()
 
@@ -85,6 +87,19 @@ class DriveNeato(Node):
         new_pose = MapPoint(translation.x, translation.y, angles[2])
 
         self.current_pose = new_pose
+
+        if (self.map_origin != None):
+            t_base_odom = self.current_pose.as_matrix()
+            t_origin_odom = self.map_origin.as_matrix()
+            t_base_origin = np.dot(t_origin_odom.getI(), t_base_odom)
+            pose = MapPoint()
+            pose.from_matrix(t_base_origin)
+
+            final_pose = Pose2D()
+            final_pose.x = pose.x
+            final_pose.y = pose.y
+            final_pose.theta = pose.theta
+            self.pub_position_in_map.publish(final_pose)
 
     def loop_wrapper(self):
         """ This function takes care of calling the run_loop function repeatedly.
