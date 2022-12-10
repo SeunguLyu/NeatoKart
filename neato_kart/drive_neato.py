@@ -178,7 +178,7 @@ class DriveNeato(Node):
         self.odom_point_list = points
 
         track_points = []
-        self.map_track_list = self.track.generate_track(1, 1, self.map_tag_list + self.map_point_list)
+        self.map_track_list = self.track.generate_track(0.2, self.map_tag_list + self.map_point_list)
         # print("Track: ")
         for track_pose in self.map_track_list:
             # print(track_pose.x, track_pose.y, math.degrees(track_pose.theta))
