@@ -13,12 +13,17 @@ from neato_kart.detect_april_tag import MapPoint
 from geometry_msgs.msg import Twist, Pose2D
 from enum import Enum
 import json
+import numpy as np
 
 class GameState(Enum):
     GAME_STOP = 1
     GAME_COUNT = 2
     GAME_PLAY = 3
     GAME_END = 4
+
+class ItemType(Enum):
+    BANANA = 1
+    BOOST = 2
 
 class GameNode(Node):
     def __init__(self):
@@ -43,6 +48,7 @@ class GameNode(Node):
         self.create_subscription(Image, robot2_name + "processed_image", self.process_robot2_image, 10)
 
         self.create_subscription(Pose2D, robot1_name + "map_position", self.process_robot1_position, 10)
+        self.create_subscription(Pose2D, robot2_name + "map_position", self.process_robot2_position, 10)
 
         self.pub_robot1_vel = self.create_publisher(Twist, robot1_name + 'cmd_vel', 10)
         self.pub_robot2_vel = self.create_publisher(Twist, robot2_name + 'cmd_vel', 10)
@@ -54,6 +60,7 @@ class GameNode(Node):
         self.game_start = False
         self.game_tick = 0
 
+        # Minimap Related
         self.map_name = "test9.json"
         self.map_path = os.path.dirname(os.path.realpath(__file__))
         self.map_path = os.path.abspath(os.path.join(self.map_path, os.pardir))
@@ -63,11 +70,15 @@ class GameNode(Node):
         self.map_multiplier = 0.0
         self.map_center_offset = (0,0)
 
-        self.item_list = []
         self.map_tag_list = []
         self.map_point_list = []
 
+        # Item Related
+        self.robot1_item = ItemType.BANANA
+        self.banana_list = []
+
         self.robot1_position = None
+        self.robot2_position = None
 
         self.load_map_from_json()
 
@@ -87,7 +98,18 @@ class GameNode(Node):
         self.cv_robot2 = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
 
     def process_robot1_position(self, msg):
-        self.robot1_position = msg
+        pose = MapPoint()
+        pose.x = msg.x
+        pose.y = msg.y
+        pose.theta = msg.theta
+        self.robot1_position = pose
+
+    def process_robot2_position(self, msg):
+        pose = MapPoint()
+        pose.x = msg.x
+        pose.y = msg.y
+        pose.theta = msg.theta
+        self.robot2_position = pose
 
     def loop_wrapper(self):
         """ This function takes care of calling the run_loop function repeatedly.
@@ -107,6 +129,7 @@ class GameNode(Node):
         self.image_two = pygame.image.load(os.path.join(self.asset_directory, 'images', '2.png'))
         self.image_three = pygame.image.load(os.path.join(self.asset_directory, 'images', '3.png'))
         self.image_start = pygame.image.load(os.path.join(self.asset_directory, 'images', 'start.png'))
+        self.image_banana = pygame.image.load(os.path.join(self.asset_directory, 'images', 'banana.png'))
         
         # Game Setup
         self.window_width = 1920
@@ -124,8 +147,8 @@ class GameNode(Node):
         keys = pygame.key.get_pressed()
 
         if self.game_state != (GameState.GAME_COUNT or GameState.GAME_END):
-            self.set_robot1_velocity(keys)
-            self.set_robot2_velocity(keys)
+            self.set_robot1_control(keys)
+            self.set_robot2_control(keys)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -138,6 +161,21 @@ class GameNode(Node):
 
             # #Draw image
             self.display.blit(pygame_image, (0, 0))
+
+            for banana in self.banana_list:
+                dist = self.distance_from_pose(banana[0], banana[1], 1)
+                banana_base_pose = np.dot(self.robot1_position.as_matrix().getI(), np.matrix([[banana[0]],[banana[1]],[1]]))
+                if banana_base_pose[0,0] > 0.2:
+                    banana_pixel = self.position_to_img_pixel(banana_base_pose[0,0], banana_base_pose[1,0])
+                    banana_resized = None
+                    if dist > 4.0:
+                        banana_resized = self.image_banana
+                    else:
+                        size = 128.0 - 28 * dist
+                        banana_resized = pygame.transform.scale(self.image_banana, (size, size))
+                    #pygame.draw.circle(self.display, (128, 78, 98), banana_pixel, 10)
+                    self.display.blit(banana_resized, banana_pixel)
+
             self.draw_map_at_point((730,510))
 
         if not self.cv_robot2 is None:
@@ -181,7 +219,6 @@ class GameNode(Node):
                 self.game_state = GameState.GAME_PLAY
                 self.game_tick = pygame.time.get_ticks()
         
-        
         pygame.display.update()
 
     def convert_opencv_img_to_pygame(self, opencv_image):
@@ -191,7 +228,45 @@ class GameNode(Node):
 
         return pygame_image
     
-    def set_robot1_velocity(self, keys):
+    def position_to_img_pixel(self, x, y, z=0):
+        t_cam_base = np.matrix([[0, 0, 1, 0.2],
+                                [-1, 0, 0, 0],
+                                [0, -1, 0, 0.05],
+                                [0, 0, 0, 1]])
+
+        # camera intrinsics
+        K = np.matrix([[971.646825, 0.000000, 501.846472], 
+                        [0.000000, 972.962863, 402.829241], 
+                        [0.000000, 0.000000, 1.000000]])
+        
+        pose_in_cam = np.dot(t_cam_base.getI(), np.matrix([[x],[y],[z],[1]]))
+
+        pixel_in_img = np.dot(K, np.matrix([[pose_in_cam[0,0]],[pose_in_cam[1,0]],[pose_in_cam[2,0]]]))
+
+        return (pixel_in_img[0,0]/pixel_in_img[2,0], pixel_in_img[1,0]/pixel_in_img[2,0])
+    
+    def distance_from_pose(self, x, y, robot):
+        robot_pose = None
+        if robot == 1:
+            robot_pose = self.robot1_position
+        else:
+            robot_pose = self.robot2_position
+
+        point1 = np.array((x, y))
+        point2 = np.array((robot_pose.x, robot_pose.y))
+
+        dist = np.linalg.norm(point1 - point2)
+
+        return dist
+    
+    def set_robot1_control(self, keys):
+
+        if keys[pygame.K_LSHIFT]:
+            if self.robot1_item == ItemType.BANANA:
+                self.robot1_item = None
+                banana_pose = np.dot(self.robot1_position.as_matrix(), np.matrix([[-0.2],[0],[1]]))
+                self.banana_list.append((banana_pose[0,0], banana_pose[1,0]))
+
         linear_vel = 0.0
         ang_vel = 0.0
 
@@ -209,7 +284,8 @@ class GameNode(Node):
 
         self.pub_robot1_vel.publish(twt)
 
-    def set_robot2_velocity(self, keys):
+
+    def set_robot2_control(self, keys):
         linear_vel = 0.0
         ang_vel = 0.0
 
