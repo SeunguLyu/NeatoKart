@@ -21,12 +21,15 @@ class CreateMap(Node):
     def __init__(self, image_topic):
         super().__init__('create_map')
 
+        self.declare_parameter('robot_name', '')
+        robot_name = self.get_parameter('robot_name').get_parameter_value().string_value
+
         self.record_done = False
 
         self.isVideo = False
         self.video_name = "april_tag_test3.avi"
 
-        self.map_name = "draw_map_test.json"
+        self.map_name = "test9.json"
         self.map_path = os.path.dirname(os.path.realpath(__file__))
         self.map_path = os.path.abspath(os.path.join(self.map_path, os.pardir))
         self.map_path = os.path.join(self.map_path, 'maps', self.map_name)
@@ -56,8 +59,11 @@ class CreateMap(Node):
             if (self.cap.isOpened() == False): 
                 print("Unable to read camera feed")
 
-        self.create_subscription(Image, image_topic, self.process_image, 10)
-        self.create_subscription(Odometry, "odom", self.process_odom, 10)
+        if robot_name != "":
+            robot_name += "/"
+
+        self.create_subscription(Image, robot_name + image_topic, self.process_image, 10)
+        self.create_subscription(Odometry, robot_name + "odom", self.process_odom, 10)
         thread = Thread(target=self.loop_wrapper)
         thread.start()
 

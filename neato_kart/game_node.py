@@ -54,7 +54,7 @@ class GameNode(Node):
         self.game_start = False
         self.game_tick = 0
 
-        self.map_name = "draw_map_test.json"
+        self.map_name = "test9.json"
         self.map_path = os.path.dirname(os.path.realpath(__file__))
         self.map_path = os.path.abspath(os.path.join(self.map_path, os.pardir))
         self.map_path = os.path.join(self.map_path, 'maps', self.map_name)
@@ -98,10 +98,10 @@ class GameNode(Node):
         pygame.mixer.init()
         pygame.mixer.music.load(os.path.join(self.asset_directory, 'sound', 'Kevin MacLeod - Pixelland.mp3'))
 
-        pygame.mixer.music.set_volume(0.2)
+        pygame.mixer.music.set_volume(0.35)
 
         self.start_sound = pygame.mixer.Sound(os.path.join(self.asset_directory, 'sound', 'beeping.mp3'))
-        self.start_sound.set_volume(0.1)
+        self.start_sound.set_volume(0.25)
 
         self.image_one = pygame.image.load(os.path.join(self.asset_directory, 'images', '1.png'))
         self.image_two = pygame.image.load(os.path.join(self.asset_directory, 'images', '2.png'))
