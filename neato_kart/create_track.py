@@ -31,51 +31,22 @@ class CreateTrack():
         self.pnum = 0
 
     def generate_track_waypoint(self, waypoint):
-        # x, y, theta, istag, tagid, pnum = waypoint -> I want pnum
-        # x, y, theta, istag, tagid = waypoint
         x = waypoint.x
         y = waypoint.y
         theta = waypoint.theta
-        outer_x = x + self.d * math.cos(theta)
-        outer_y = y + self.d * math.sin(theta)
-        inner_x = x + self.d * math.cos(-theta - 180)
-        inner_y = y + self.d * math.sin(-theta)
+
+        d1 = [0, 0.2, 1]
+        d2 = [0, -0.2, 1]
         
-        # outer_x1 = outer_x + self.l/2 * math.cos(90-theta)
-        # outer_y1 = outer_y + self.l/2 * math.sin(-90+theta)
-        # outer_x2 = outer_x + self.l/2 * math.cos(-90-theta)
-        # outer_y2 = outer_y + self.l/2 * math.sin(90-theta)
-        ###
-        # r = math.sqrt((self.l/2)**2 + self.d**2)
-        r = self.d
-        # angle = math.asin(math.radians((self.l/2)/r))
-        # print(math.degrees(angle))
-        ##
-        outer_x1 = x + r * math.cos(math.radians(theta))
-        outer_y1 = y + r * math.sin(math.radians(theta))
-        # outer_x2 = x + r * math.cos(math.radians(theta+180))
-        # outer_y2 = y + r * math.sin(math.radians(theta+180))
+        outer = np.dot(waypoint.as_matrix(), d1)
+        inner = np.dot(waypoint.as_matrix(), d2)
 
-        # inner_x1 = inner_x + self.l/2 * math.cos(90-theta)
-        # inner_y1 = inner_y + self.l/2 * math.sin(-90+theta)
-        # inner_x2 = inner_x + self.l/2 * math.cos(-90-theta)
-        # inner_y2 = inner_y + self.l/2 * math.sin(90-theta)
-        inner_x1 = x + r * math.cos(math.radians(theta+180))
-        inner_y1 = y + r * math.sin(math.radians(theta+180))
-        # inner_x2 = x + r * math.cos(math.radians(theta+180))
-        # inner_y2 = y + r * math.sin(math.radians(theta+180))
+        outer = TrackPoint(outer[0, 0], outer[0, 1], 0, 0)
+        inner = TrackPoint(inner[0, 0], inner[0, 1], 0, 0)
 
-        outer_point1 = TrackPoint(outer_x1, outer_y1, theta, self.pnum)
-        self.pnum += 1
-        # outer_point2 = TrackPoint(outer_x2, outer_y2, self.pnum)
-        # self.pnum += 1
-        inner_point1 = TrackPoint(inner_x1, inner_y1, theta, self.pnum)
-        self.pnum += 1
-        # inner_point2 = TrackPoint(inner_x2, inner_y2, self.pnum)
-        # self.pnum += 1
+        self.outertrack.extend([outer])
+        self.innertrack.extend([inner])
 
-        self.outertrack.extend([outer_point1])
-        self.innertrack.extend([inner_point1])
 
     def generate_track(self, d, l, waypoints):
         self.d = d
@@ -93,20 +64,25 @@ class CreateTrack():
     
     def draw_track(self, waypoints, image):
         self.waypoints = waypoints
+        self.generate_track(1, 1, waypoints)
         
         track_image = image
 
         # transformation matrix from base link to camera frame
         t_cam_base = np.matrix([[0, 0, 1, 0.2],
                                 [-1, 0, 0, 0],
-                                [0, -1, 0, 0.05],
+                                [0, -1, 0, 0.15],
                                 [0, 0, 0, 1]])
 
         # camera intrinsics
-        K = np.matrix([[971.646825, 0.000000, 501.846472], 
-                       [0.000000, 972.962863, 402.829241], 
-                       [0.000000, 0.000000, 1.000000]])
+        #K = np.matrix([[971.646825, 0.000000, 501.846472], 
+        #               [0.000000, 972.962863, 402.829241], 
+        #               [0.000000, 0.000000, 1.000000]])
 
+
+        K = np.matrix([[971.646825, 0.000000, 1024/2], 
+                       [0.000000, 972.962863, 768/2], 
+                       [0.000000, 0.000000, 1.000000]])
         # calculate pixel coords from base link coords
         pixel_coords = []
         w = []
@@ -116,11 +92,16 @@ class CreateTrack():
 
             for waypoint in self.waypoints:
                 waypoint = [waypoint.x, waypoint.y, 0, 1]
+                print("waypoint " + str(waypoint))
+
                 w.append(waypoint)
 
                 cam_waypoint = np.dot(np.linalg.inv(t_cam_base), waypoint)
                 cam_waypoint = np.delete(cam_waypoint, -1)
+                print("camwaypoint " + str(cam_waypoint))
                 pixel_coord_unnorm = np.dot(K, cam_waypoint.T)
+                if pixel_coord_unnorm[-1] < 0:
+                    continue
                 pixel_coord_norm = np.divide(pixel_coord_unnorm, pixel_coord_unnorm[-1]) 
 
                 # store all the pixels
@@ -131,6 +112,7 @@ class CreateTrack():
                 cy = track_image.shape[1]
                 px = pixel_coord_norm[0]
                 py = pixel_coord_norm[1]
+                print("pixels: ", px, py)
 
                 # Center coordinates
                 center_coordinates = (int(px), int(py))
@@ -147,11 +129,108 @@ class CreateTrack():
                 # Using cv2.circle() method
                 # Draw a circle with blue line borders of thickness of 2 px
                 track_image = cv2.circle(track_image, center_coordinates, radius, color, thickness) 
-                track_image = cv2.line(track_image, first_point, center_coordinates, color, thickness)
+                # track_image = cv2.putText(track_image, center_coordinates, center_coordinates, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), thickness, cv2.LINE_AA)
+                track_image = cv2.line(track_image, first_point, center_coordinates, color, 5)
                 
                 first_point = center_coordinates
 
-        print("W: ", w)
+        if len(self.outertrack) != 0:
+            self.track_points = self.outertrack
+            first_point = (int(self.track_points[0].x), int(self.track_points[0].y))
+
+            for waypoint in self.track_points:
+                waypoint = [waypoint.x, waypoint.y, 0, 1]
+
+                w.append(waypoint)
+
+                cam_waypoint = np.dot(np.linalg.inv(t_cam_base), waypoint)
+                cam_waypoint = np.delete(cam_waypoint, -1)
+                pixel_coord_unnorm = np.dot(K, cam_waypoint.T)
+
+                if pixel_coord_unnorm[-1] < 0:
+                    continue
+                pixel_coord_norm = np.divide(pixel_coord_unnorm, pixel_coord_unnorm[-1]) 
+
+                # store all the pixels
+                pixel_coords.append(pixel_coord_norm)
+
+                # print cx, cy to check the opencv dim
+                cx = track_image.shape[0]
+                cy = track_image.shape[1]
+                px = pixel_coord_norm[0]
+                py = pixel_coord_norm[1]
+                print("pixels: ", px, py)
+
+                # Center coordinates
+                center_coordinates = (int(px), int(py))
+                
+                # Radius of circle
+                radius = 3
+                
+                # Blue color in BGR
+                color = (0, 255, 0)
+                
+                # Line thickness of 2 px
+                thickness = 2
+                
+                # Using cv2.circle() method
+                # Draw a circle with blue line borders of thickness of 2 px
+                # track_image = cv2.circle(track_image, center_coordinates, radius, color, thickness) 
+                # track_image = cv2.putText(track_image, center_coordinates, center_coordinates, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), thickness, cv2.LINE_AA)
+                track_image = cv2.line(track_image, first_point, center_coordinates, color, 5)
+                
+                first_point = center_coordinates
+
+        if len(self.innertrack) != 0:
+            self.track_points = self.innertrack
+            first_point = (int(self.track_points[0].x), int(self.track_points[0].y))
+
+            for waypoint in self.track_points:
+                waypoint = [waypoint.x, waypoint.y, 0, 1]
+                print("waypoint " + str(waypoint))
+
+                w.append(waypoint)
+
+                cam_waypoint = np.dot(np.linalg.inv(t_cam_base), waypoint)
+                cam_waypoint = np.delete(cam_waypoint, -1)
+                print("camwaypoint " + str(cam_waypoint))
+                pixel_coord_unnorm = np.dot(K, cam_waypoint.T)
+                if pixel_coord_unnorm[-1] < 0:
+                    continue
+                pixel_coord_norm = np.divide(pixel_coord_unnorm, pixel_coord_unnorm[-1]) 
+
+                # store all the pixels
+                pixel_coords.append(pixel_coord_norm)
+
+                # print cx, cy to check the opencv dim
+                cx = track_image.shape[0]
+                cy = track_image.shape[1]
+                px = pixel_coord_norm[0]
+                py = pixel_coord_norm[1]
+                print("pixels: ", px, py)
+
+                # Center coordinates
+                center_coordinates = (int(px), int(py))
+                
+                # Radius of circle
+                radius = 3
+                
+                # Blue color in BGR
+                color = (0, 255, 0)
+                
+                # Line thickness of 2 px
+                thickness = 2
+                
+                # Using cv2.circle() method
+                # Draw a circle with blue line borders of thickness of 2 px
+                # track_image = cv2.circle(track_image, center_coordinates, radius, color, thickness) 
+                # track_image = cv2.putText(track_image, center_coordinates, center_coordinates, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), thickness, cv2.LINE_AA)
+                track_image = cv2.line(track_image, first_point, center_coordinates, color, 5)
+                
+                first_point = center_coordinates
+
+
+        # print("W: ", w)
         return track_image
 
 

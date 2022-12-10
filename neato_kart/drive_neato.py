@@ -125,7 +125,8 @@ class DriveNeato(Node):
 
             detected_image = self.cv_image.copy()
 
-            detected_image = self.track.draw_track((self.base_tag_list + self.base_point_list), detected_image)
+            # detected_image = self.track.draw_track((self.base_tag_list + self.base_point_list), detected_image)
+            detected_image = self.track.draw_track(self.base_point_list, detected_image)
 
             for r in results:
                 # check tag distance from robot, and then add when angle isn't too stiff
