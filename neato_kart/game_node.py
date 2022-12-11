@@ -23,7 +23,7 @@ class GameState(Enum):
 
 class ItemType(Enum):
     BANANA = 1
-    BOOST = 2
+    TURTLE = 2
 
 class GameNode(Node):
     def __init__(self):
@@ -75,6 +75,8 @@ class GameNode(Node):
 
         # Item Related
         self.robot1_item = ItemType.BANANA
+        self.robot1_is_rotating = False
+        self.robot1_rotate_tick = 0
         self.banana_list = []
 
         self.robot1_position = None
@@ -168,13 +170,13 @@ class GameNode(Node):
                 if banana_base_pose[0,0] > 0.2:
                     banana_pixel = self.position_to_img_pixel(banana_base_pose[0,0], banana_base_pose[1,0])
                     banana_resized = None
-                    if dist > 4.0:
-                        banana_resized = self.image_banana
+                    if dist > 2.0:
+                        banana_resized = banana_resized = pygame.transform.scale(self.image_banana, (32, 32))
                     else:
-                        size = 128.0 - 28 * dist
+                        size = 192 - 80 * dist
                         banana_resized = pygame.transform.scale(self.image_banana, (size, size))
                     #pygame.draw.circle(self.display, (128, 78, 98), banana_pixel, 10)
-                    self.display.blit(banana_resized, banana_pixel)
+                    self.display.blit(banana_resized, (banana_pixel[0]-size/2, banana_pixel[1]-size/2))
 
             self.draw_map_at_point((730,510))
 
@@ -260,30 +262,43 @@ class GameNode(Node):
         return dist
     
     def set_robot1_control(self, keys):
-
+        print(self.banana_list)
         if keys[pygame.K_LSHIFT]:
             if self.robot1_item == ItemType.BANANA:
                 self.robot1_item = None
-                banana_pose = np.dot(self.robot1_position.as_matrix(), np.matrix([[-0.2],[0],[1]]))
+                banana_pose = np.dot(self.robot1_position.as_matrix(), np.matrix([[1],[0],[1]]))
                 self.banana_list.append((banana_pose[0,0], banana_pose[1,0]))
 
+        if self.robot1_is_rotating == False:
+            for banana in self.banana_list:
+                dist = self.distance_from_pose(banana[0], banana[1], 1)
+                if dist < 0.1:
+                    self.robot1_is_rotating = True
+                    self.banana_list.remove(banana)
+                    self.robot1_rotate_tick = pygame.time.get_ticks()
+                    break
+        
         linear_vel = 0.0
         ang_vel = 0.0
 
-        if keys[pygame.K_w]:
-            linear_vel += 0.3
-        if keys[pygame.K_s]:
-            linear_vel -= 0.3
-        if keys[pygame.K_a] and linear_vel != 0:
-            ang_vel += 1.0
-        if keys[pygame.K_d] and linear_vel != 0:
-            ang_vel -= 1.0
+        if self.robot1_is_rotating:
+            ang_vel = 2.0
+            if pygame.time.get_ticks() > self.robot1_rotate_tick + 3500:
+                self.robot1_is_rotating = False
+        else:
+            if keys[pygame.K_w]:
+                linear_vel += 0.3
+            if keys[pygame.K_s]:
+                linear_vel -= 0.3
+            if keys[pygame.K_a] and linear_vel != 0:
+                ang_vel += 1.0
+            if keys[pygame.K_d] and linear_vel != 0:
+                ang_vel -= 1.0
         twt = Twist()
         twt.angular.z = ang_vel
         twt.linear.x = linear_vel
 
         self.pub_robot1_vel.publish(twt)
-
 
     def set_robot2_control(self, keys):
         linear_vel = 0.0
@@ -359,6 +374,12 @@ class GameNode(Node):
             pygame.draw.circle(self.display, (200, 200, 200, 200), (point_x, point_y), 7.5)
 
         pygame.draw.lines(self.display, (200, 200, 200, 200), False, point_list, 15)
+
+        for banana in self.banana_list:
+            point_x = map_center[0] - banana[1] * self.map_multiplier
+            point_y = map_center[1] - banana[0] * self.map_multiplier
+
+            pygame.draw.circle(self.display, (255,255,0), (point_x, point_y), 5.0)
         
         for tag in self.map_tag_list:
             point_x = map_center[0] - tag.y * self.map_multiplier
