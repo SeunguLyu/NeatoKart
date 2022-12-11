@@ -14,6 +14,7 @@ from geometry_msgs.msg import Twist, Pose2D
 from enum import Enum
 import json
 import numpy as np
+import random
 
 class GameState(Enum):
     GAME_STOP = 1
@@ -23,7 +24,7 @@ class GameState(Enum):
 
 class ItemType(Enum):
     BANANA = 1
-    TURTLE = 2
+    #TURTLE = 2
 
 class GameNode(Node):
     def __init__(self):
@@ -60,8 +61,13 @@ class GameNode(Node):
         self.game_start = False
         self.game_tick = 0
 
+        # UI related
+        self.p2_offset = 952 + 16
+        self.window_width = 1920
+        self.window_height = 714
+
         # Minimap Related
-        self.map_name = "test7.json"
+        self.map_name = "draw_map_test.json"
         self.map_path = os.path.dirname(os.path.realpath(__file__))
         self.map_path = os.path.abspath(os.path.join(self.map_path, os.pardir))
         self.map_path = os.path.join(self.map_path, 'maps', self.map_name)
@@ -74,13 +80,18 @@ class GameNode(Node):
         self.map_point_list = []
 
         # Item Related
-        self.robot1_item = ItemType.BANANA
+        self.robot1_item = None
         self.robot1_is_rotating = False
         self.robot1_rotate_tick = 0
         self.banana_list = []
         self.turtle_list = []
 
+        # Race Progress Related
         self.robot1_position = None
+        self.robot1_current_tag = 0
+        self.robot1_total_tag = 0 
+        self.robot1_last_tag = False
+
         self.robot2_position = None
 
         self.load_map_from_json()
@@ -133,11 +144,7 @@ class GameNode(Node):
         self.image_three = pygame.image.load(os.path.join(self.asset_directory, 'images', '3.png'))
         self.image_start = pygame.image.load(os.path.join(self.asset_directory, 'images', 'start.png'))
         self.image_banana = pygame.image.load(os.path.join(self.asset_directory, 'images', 'banana.png'))
-        
-        # Game Setup
-        self.window_width = 1920
-        self.window_height = 714
-        
+
         self.display = pygame.display.set_mode((self.window_width, self.window_height))
         pygame.display.set_caption('Neato Kart')
         while True:
@@ -145,40 +152,54 @@ class GameNode(Node):
             time.sleep(0.05)
 
     def run_loop(self):
-
-        self.display.fill((0,0,0))
         keys = pygame.key.get_pressed()
-
-        if self.game_state != (GameState.GAME_COUNT or GameState.GAME_END):
-            self.set_robot1_control(keys)
-            self.set_robot2_control(keys)
-
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
 
+        if self.game_state == GameState.GAME_STOP:
+            if keys[pygame.K_SPACE]:
+                self.game_state = GameState.GAME_COUNT
+                pygame.mixer.Sound.play(self.start_sound)
+                self.game_tick = pygame.time.get_ticks()           
+
+        if self.game_state != (GameState.GAME_COUNT or GameState.GAME_END):
+            self.set_robot1_control(keys)
+            self.set_robot2_control(keys)
+        
+        self.draw_game()
+
+    def draw_game(self):
+        self.display.fill((0,0,0))
+
         if not self.cv_robot1 is None:
+            # convert opencv image to pygame image
             pygame_image = self.convert_opencv_img_to_pygame(self.cv_robot1)
             pygame_image = pygame.transform.scale(pygame_image, (952, 714))
 
-            # #Draw image
+            # Draw image
             self.display.blit(pygame_image, (0, 0))
 
+            # draw items
             for banana in self.banana_list:
                 dist = self.distance_from_pose(banana[0], banana[1], 1)
                 banana_base_pose = np.dot(self.robot1_position.as_matrix().getI(), np.matrix([[banana[0]],[banana[1]],[1]]))
                 if banana_base_pose[0,0] > 0.2:
                     banana_pixel = self.position_to_img_pixel(banana_base_pose[0,0], banana_base_pose[1,0])
-                    if dist > 2.0:
-                        size = 32     
+                    if dist > 3.0:
+                        continue  
+                    elif dist > 2.0:
+                        size = 32
                     else:
                         size = 192 - 80 * dist
                     banana_resized = pygame.transform.scale(self.image_banana, (size, size))
                     self.display.blit(banana_resized, (banana_pixel[0]-size/2, banana_pixel[1]-size/2))
 
+            # draw map
             self.draw_map_at_point((820,580))
 
+            # draw item UI
             item_ui_origin = (10,10)
             pygame.draw.lines(self.display, (200, 200, 200, 200), True, 
                                 [item_ui_origin, 
@@ -190,21 +211,28 @@ class GameNode(Node):
             if self.robot1_item == ItemType.BANANA:
                 banana_resized = pygame.transform.scale(self.image_banana, (80, 80))
                 self.display.blit(banana_resized, (item_ui_origin[0] + 10, item_ui_origin[1] + 10))
-            
+
+            # draw checkpoint progress
+            circle_distance = 60
+            total_tag = len(self.map_tag_list) + 1
+            start_point = [476 - (total_tag-1)*circle_distance/2, 60]
+            for i in range(total_tag):
+                width = 5
+                if self.robot1_total_tag >= i + 1:
+                    width = 0
+                pygame.draw.circle(self.display, (200, 200, 200, 200), start_point, 20, width)
+                start_point[0] += circle_distance
 
         if not self.cv_robot2 is None:
             pygame_image = self.convert_opencv_img_to_pygame(self.cv_robot2)
             pygame_image = pygame.transform.scale(pygame_image, (952, 714))
 
             # #Draw image
-            self.display.blit(pygame_image, (952 + 16, 0))
-            self.draw_map_at_point((730 + 952,510))
+            self.display.blit(pygame_image, (self.p2_offset, 0))
+            self.draw_map_at_point((730 + self.p2_offset, 510))
 
         if self.game_state == GameState.GAME_STOP:
-            if keys[pygame.K_SPACE]:
-                self.game_state = GameState.GAME_COUNT
-                pygame.mixer.Sound.play(self.start_sound)
-                self.game_tick = pygame.time.get_ticks()       
+            pass    
         elif self.game_state == GameState.GAME_COUNT:
             if pygame.time.get_ticks() < self.game_tick + 500:
                 pass
@@ -266,6 +294,8 @@ class GameNode(Node):
         else:
             robot_pose = self.robot2_position
 
+        if robot_pose == None:
+            return 10000.0
         point1 = np.array((x, y))
         point2 = np.array((robot_pose.x, robot_pose.y))
 
@@ -273,22 +303,8 @@ class GameNode(Node):
 
         return dist
     
-    def set_robot1_control(self, keys):
-        if keys[pygame.K_LSHIFT]:
-            if self.robot1_item == ItemType.BANANA:
-                self.robot1_item = None
-                banana_pose = np.dot(self.robot1_position.as_matrix(), np.matrix([[1],[0],[1]]))
-                self.banana_list.append((banana_pose[0,0], banana_pose[1,0]))
-
-        if self.robot1_is_rotating == False:
-            for banana in self.banana_list:
-                dist = self.distance_from_pose(banana[0], banana[1], 1)
-                if dist < 0.1:
-                    self.robot1_is_rotating = True
-                    self.banana_list.remove(banana)
-                    self.robot1_rotate_tick = pygame.time.get_ticks()
-                    break
-        
+    def set_robot1_control(self, keys):        
+        # neato speed related
         linear_vel = 0.0
         ang_vel = 0.0
 
@@ -311,6 +327,44 @@ class GameNode(Node):
 
         self.pub_robot1_vel.publish(twt)
 
+        if self.game_state == GameState.GAME_STOP:
+            return
+
+        # checkpoint check
+        next_point = self.map_tag_list[self.robot1_current_tag]
+        checkpoint_dist = self.distance_from_pose(next_point.x, next_point.y, 1)
+        if checkpoint_dist < 0.3:
+            self.robot1_current_tag += 1
+            self.robot1_total_tag += 1
+            if self.robot1_current_tag == len(self.map_tag_list):
+                self.robot1_current_tag = 0
+                self.robot1_last_tag = True
+            if self.robot1_item == None:
+                self.robot1_item = random.choice(list(ItemType))
+
+        # item related
+        if self.robot1_is_rotating == False:
+            # using item
+            if keys[pygame.K_LSHIFT]:
+                if self.robot1_item == ItemType.BANANA:
+                    self.robot1_item = None
+                    banana_offset = None
+                    if keys[pygame.K_s]:
+                        banana_offset = np.matrix([[-0.2],[0],[1]])
+                    else:
+                        banana_offset = np.matrix([[1.5],[0],[1]])
+                    banana_pose = np.dot(self.robot1_position.as_matrix(), banana_offset)
+                    self.banana_list.append((banana_pose[0,0], banana_pose[1,0]))
+
+            # detect if robot is colliding with banana
+            for banana in self.banana_list:
+                dist = self.distance_from_pose(banana[0], banana[1], 1)
+                if dist < 0.1:
+                    self.robot1_is_rotating = True
+                    self.banana_list.remove(banana)
+                    self.robot1_rotate_tick = pygame.time.get_ticks()
+                    break
+
     def set_robot2_control(self, keys):
         linear_vel = 0.0
         ang_vel = 0.0
@@ -328,45 +382,6 @@ class GameNode(Node):
         twt.linear.x = linear_vel
 
         self.pub_robot2_vel.publish(twt)
-
-    def load_map_from_json(self):
-        data = []
-        with open(self.map_path) as f:
-            for line in f:
-                data.append(json.loads(line))
-
-        low_x = 0
-        low_y = 0
-        high_x = 0
-        high_y = 0
-
-        for d in data:
-            map_point = MapPoint()
-            map_point.from_dict(d)
-            if map_point.istag:
-                self.map_tag_list.append(map_point)
-            else:
-                self.map_point_list.append(map_point)
-
-            if map_point.x > high_y:
-                high_y = map_point.x
-            if map_point.x < low_y:
-                low_y = map_point.x
-            
-            if -map_point.y > high_x:
-                high_x = -map_point.y
-            if -map_point.y < low_x:
-                low_x = -map_point.y
-        
-        if high_x - low_x > high_y - low_y:
-            self.map_multiplier = self.map_size/(high_x - low_x)
-        else:
-            self.map_multiplier = self.map_size/(high_y - low_y)
-
-        x_offset = -(low_x + high_x)/2 * self.map_multiplier
-        y_offset = (low_y + high_y)/2 * self.map_multiplier
-        self.map_center_offset = (x_offset, y_offset)
-        #print(self.map_center_offset)
     
     def draw_map_at_point(self, center):
         map_half = self.map_size/2 + 20
@@ -408,6 +423,44 @@ class GameNode(Node):
             point_y = map_center[1] - self.robot1_position.x * self.map_multiplier
 
             pygame.draw.circle(self.display, (0,0,255), (point_x, point_y), 10.0)
+
+    def load_map_from_json(self):
+        data = []
+        with open(self.map_path) as f:
+            for line in f:
+                data.append(json.loads(line))
+                
+        low_x = 0
+        low_y = 0
+        high_x = 0
+        high_y = 0
+
+        for i in range(len(data)):
+            map_point = MapPoint()
+            map_point.from_dict(data[i])
+            if map_point.istag:
+                self.map_tag_list.append(map_point)
+            else:
+                self.map_point_list.append(map_point)
+
+            if map_point.x > high_y:
+                high_y = map_point.x
+            if map_point.x < low_y:
+                low_y = map_point.x
+            
+            if -map_point.y > high_x:
+                high_x = -map_point.y
+            if -map_point.y < low_x:
+                low_x = -map_point.y
+        
+        if high_x - low_x > high_y - low_y:
+            self.map_multiplier = self.map_size/(high_x - low_x)
+        else:
+            self.map_multiplier = self.map_size/(high_y - low_y)
+
+        x_offset = -(low_x + high_x)/2 * self.map_multiplier
+        y_offset = (low_y + high_y)/2 * self.map_multiplier
+        self.map_center_offset = (x_offset, y_offset)
 
 def main(args=None):
     rclpy.init()
