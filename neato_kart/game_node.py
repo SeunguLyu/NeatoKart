@@ -61,7 +61,7 @@ class GameNode(Node):
         self.game_tick = 0
 
         # Minimap Related
-        self.map_name = "test9.json"
+        self.map_name = "test7.json"
         self.map_path = os.path.dirname(os.path.realpath(__file__))
         self.map_path = os.path.abspath(os.path.join(self.map_path, os.pardir))
         self.map_path = os.path.join(self.map_path, 'maps', self.map_name)
@@ -78,6 +78,7 @@ class GameNode(Node):
         self.robot1_is_rotating = False
         self.robot1_rotate_tick = 0
         self.banana_list = []
+        self.turtle_list = []
 
         self.robot1_position = None
         self.robot2_position = None
@@ -169,16 +170,27 @@ class GameNode(Node):
                 banana_base_pose = np.dot(self.robot1_position.as_matrix().getI(), np.matrix([[banana[0]],[banana[1]],[1]]))
                 if banana_base_pose[0,0] > 0.2:
                     banana_pixel = self.position_to_img_pixel(banana_base_pose[0,0], banana_base_pose[1,0])
-                    banana_resized = None
                     if dist > 2.0:
-                        banana_resized = banana_resized = pygame.transform.scale(self.image_banana, (32, 32))
+                        size = 32     
                     else:
                         size = 192 - 80 * dist
-                        banana_resized = pygame.transform.scale(self.image_banana, (size, size))
-                    #pygame.draw.circle(self.display, (128, 78, 98), banana_pixel, 10)
+                    banana_resized = pygame.transform.scale(self.image_banana, (size, size))
                     self.display.blit(banana_resized, (banana_pixel[0]-size/2, banana_pixel[1]-size/2))
 
-            self.draw_map_at_point((730,510))
+            self.draw_map_at_point((820,580))
+
+            item_ui_origin = (10,10)
+            pygame.draw.lines(self.display, (200, 200, 200, 200), True, 
+                                [item_ui_origin, 
+                                (item_ui_origin[0] + 100, item_ui_origin[1]), 
+                                (item_ui_origin[0] + 100, item_ui_origin[1] + 100),
+                                (item_ui_origin[0], item_ui_origin[1] + 100)]
+                                , 5)
+            
+            if self.robot1_item == ItemType.BANANA:
+                banana_resized = pygame.transform.scale(self.image_banana, (80, 80))
+                self.display.blit(banana_resized, (item_ui_origin[0] + 10, item_ui_origin[1] + 10))
+            
 
         if not self.cv_robot2 is None:
             pygame_image = self.convert_opencv_img_to_pygame(self.cv_robot2)
@@ -262,7 +274,6 @@ class GameNode(Node):
         return dist
     
     def set_robot1_control(self, keys):
-        print(self.banana_list)
         if keys[pygame.K_LSHIFT]:
             if self.robot1_item == ItemType.BANANA:
                 self.robot1_item = None
@@ -343,24 +354,29 @@ class GameNode(Node):
                 low_y = map_point.x
             
             if -map_point.y > high_x:
-                high_x = map_point.x
+                high_x = -map_point.y
             if -map_point.y < low_x:
-                low_x = map_point.x
-
-        #print(high_x - low_x)
-        #print(high_y - low_y)
+                low_x = -map_point.y
         
         if high_x - low_x > high_y - low_y:
             self.map_multiplier = self.map_size/(high_x - low_x)
         else:
             self.map_multiplier = self.map_size/(high_y - low_y)
 
-        x_offset = -low_x * self.map_multiplier - self.map_size/2.0
-        y_offset = low_y * self.map_multiplier + self.map_size/2.0
+        x_offset = -(low_x + high_x)/2 * self.map_multiplier
+        y_offset = (low_y + high_y)/2 * self.map_multiplier
         self.map_center_offset = (x_offset, y_offset)
         #print(self.map_center_offset)
     
     def draw_map_at_point(self, center):
+        map_half = self.map_size/2 + 20
+        pygame.draw.lines(self.display, (200, 200, 200, 200), True, 
+                                [(center[0] - map_half, center[1] - map_half),
+                                (center[0] + map_half, center[1] - map_half), 
+                                (center[0] + map_half, center[1] + map_half),
+                                (center[0] - map_half, center[1] + map_half)]
+                                , 5)
+
         map_center = (center[0] + self.map_center_offset[0], center[1] + self.map_center_offset[1])
 
         point_list = []

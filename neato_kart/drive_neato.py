@@ -28,7 +28,7 @@ class DriveNeato(Node):
         self.declare_parameter('robot_name', '')
         robot_name = self.get_parameter('robot_name').get_parameter_value().string_value
 
-        self.map_name = "test9.json"
+        self.map_name = "draw_map_test.json"
         self.map_path = os.path.dirname(os.path.realpath(__file__))
         self.map_path = os.path.abspath(os.path.join(self.map_path, os.pardir))
         self.map_path = os.path.join(self.map_path, 'maps', self.map_name)
