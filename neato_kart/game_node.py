@@ -90,7 +90,6 @@ class GameNode(Node):
         self.robot1_position = None
         self.robot1_current_tag = 0
         self.robot1_total_tag = 0 
-        self.robot1_last_tag = False
 
         self.robot2_position = None
 
@@ -144,6 +143,7 @@ class GameNode(Node):
         self.image_three = pygame.image.load(os.path.join(self.asset_directory, 'images', '3.png'))
         self.image_start = pygame.image.load(os.path.join(self.asset_directory, 'images', 'start.png'))
         self.image_banana = pygame.image.load(os.path.join(self.asset_directory, 'images', 'banana.png'))
+        self.image_end = pygame.image.load(os.path.join(self.asset_directory, 'images', 'victory.png'))
 
         self.display = pygame.display.set_mode((self.window_width, self.window_height))
         pygame.display.set_caption('Neato Kart')
@@ -164,9 +164,12 @@ class GameNode(Node):
                 pygame.mixer.Sound.play(self.start_sound)
                 self.game_tick = pygame.time.get_ticks()           
 
-        if self.game_state != (GameState.GAME_COUNT or GameState.GAME_END):
+        if self.game_state == GameState.GAME_STOP or self.game_state == GameState.GAME_PLAY:
             self.set_robot1_control(keys)
             self.set_robot2_control(keys)
+        elif self.game_state == GameState.GAME_END:
+            self.pub_robot1_vel.publish(Twist())
+            self.pub_robot2_vel.publish(Twist())
         
         self.draw_game()
 
@@ -220,7 +223,7 @@ class GameNode(Node):
                 width = 5
                 if self.robot1_total_tag >= i + 1:
                     width = 0
-                pygame.draw.circle(self.display, (200, 200, 200, 200), start_point, 20, width)
+                pygame.draw.circle(self.display, (79, 238, 77, 255), start_point, 20, width)
                 start_point[0] += circle_distance
 
         if not self.cv_robot2 is None:
@@ -260,6 +263,11 @@ class GameNode(Node):
                 pygame.mixer.music.play(-1)
                 self.game_state = GameState.GAME_PLAY
                 self.game_tick = pygame.time.get_ticks()
+        elif self.game_state == GameState.GAME_END:
+            image_rect = self.image_end.get_rect()
+            screen_rect = self.display.get_rect()
+            image_rect.center = screen_rect.center
+            self.display.blit(self.image_end, image_rect)
         
         pygame.display.update()
 
@@ -314,9 +322,9 @@ class GameNode(Node):
                 self.robot1_is_rotating = False
         else:
             if keys[pygame.K_w]:
-                linear_vel += 0.3
+                linear_vel += 0.6
             if keys[pygame.K_s]:
-                linear_vel -= 0.3
+                linear_vel -= 0.6
             if keys[pygame.K_a] and linear_vel != 0:
                 ang_vel += 1.0
             if keys[pygame.K_d] and linear_vel != 0:
@@ -338,7 +346,8 @@ class GameNode(Node):
             self.robot1_total_tag += 1
             if self.robot1_current_tag == len(self.map_tag_list):
                 self.robot1_current_tag = 0
-                self.robot1_last_tag = True
+            elif self.robot1_total_tag == len(self.map_tag_list) + 1:
+                self.game_state = GameState.GAME_END
             if self.robot1_item == None:
                 self.robot1_item = random.choice(list(ItemType))
 
