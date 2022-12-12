@@ -75,102 +75,25 @@ class CreateTrack():
         self.generate_track(0.2, waypoints)
 
         # transformation matrix from base link to camera frame
-        t_cam_base = np.matrix([[0, 0, 1, 0.2],
+        self.t_cam_base = np.matrix([[0, 0, 1, 0.2],
                                 [-1, 0, 0, 0],
                                 [0, -1, 0, 0.15],
                                 [0, 0, 0, 1]])
 
         # camera intrinsics
-        #K = np.matrix([[971.646825, 0.000000, 501.846472], 
-        #               [0.000000, 972.962863, 402.829241], 
-        #               [0.000000, 0.000000, 1.000000]])
+        self.K = np.matrix([[971.646825, 0.000000, 501.846472], 
+                      [0.000000, 972.962863, 402.829241], 
+                      [0.000000, 0.000000, 1.000000]])
 
 
-        K = np.matrix([[971.646825, 0.000000, 1024/2], 
-                       [0.000000, 972.962863, 768/2], 
-                       [0.000000, 0.000000, 1.000000]])
+        # self.K = np.matrix([[971.646825, 0.000000, 1024/2], 
+        #                [0.000000, 972.962863, 768/2], 
+        #                [0.000000, 0.000000, 1.000000]])
 
-        # calculate pixel coords from base link coords
-        pixel_coords = []
-        center_track = []
-        out_track = []
-        in_track = []
-
-        if len(self.waypoints) != 0:
-            for waypoint in self.waypoints:
-                waypoint = [waypoint.x, waypoint.y, 0, 1]
-                cam_waypoint = np.dot(np.linalg.inv(t_cam_base), waypoint)
-                cam_waypoint = np.delete(cam_waypoint, -1)
-                pixel_coord_unnorm = np.dot(K, cam_waypoint.T)
-
-                if pixel_coord_unnorm[-1] < 0:
-                    continue
-                pixel_coord_norm = np.divide(pixel_coord_unnorm, pixel_coord_unnorm[-1]) 
-
-                # store all the pixels
-                pixel_coords.append(pixel_coord_norm)
-
-                # print cx, cy to check the opencv dim
-                cx = track_image.shape[0]
-                cy = track_image.shape[1]
-
-                # get pixel coordinates in camera view
-                px = pixel_coord_norm[0]
-                py = pixel_coord_norm[1]
-
-                center_track.append((int(px), int(py)))
- 
-
-        if len(self.outertrack) != 0:
-            for waypoint in self.outertrack:
-                waypoint = [waypoint.x, waypoint.y, 0, 1]
-                cam_waypoint = np.dot(np.linalg.inv(t_cam_base), waypoint)
-                cam_waypoint = np.delete(cam_waypoint, -1)
-                pixel_coord_unnorm = np.dot(K, cam_waypoint.T)
-
-                if pixel_coord_unnorm[-1] < 0:
-                    continue
-                pixel_coord_norm = np.divide(pixel_coord_unnorm, pixel_coord_unnorm[-1]) 
-
-                # store all the pixels
-                pixel_coords.append(pixel_coord_norm)
-
-                # print cx, cy to check the opencv dim
-                cx = track_image.shape[0]
-                cy = track_image.shape[1]
-
-                # get pixel coordinates in camera view
-                px = pixel_coord_norm[0]
-                py = pixel_coord_norm[1]
-
-                out_track.append((int(px), int(py)))
-
-
-        if len(self.innertrack) != 0:
-            for waypoint in self.innertrack:
-                waypoint = [waypoint.x, waypoint.y, 0, 1]
-                cam_waypoint = np.dot(np.linalg.inv(t_cam_base), waypoint)
-                cam_waypoint = np.delete(cam_waypoint, -1)
-                pixel_coord_unnorm = np.dot(K, cam_waypoint.T)
-
-                if pixel_coord_unnorm[-1] < 0:
-                    continue
-                pixel_coord_norm = np.divide(pixel_coord_unnorm, pixel_coord_unnorm[-1]) 
-
-                # store all the pixels
-                pixel_coords.append(pixel_coord_norm)
-
-                # print cx, cy to check the opencv dim
-                cx = track_image.shape[0]
-                cy = track_image.shape[1]
-
-                # get pixel coordinates in camera view
-                px = pixel_coord_norm[0]
-                py = pixel_coord_norm[1]
-
-                in_track.append((int(px), int(py)))
-
-                                
+        center_track = self.get_track_pixel_points(self.waypoints)
+        out_track = self.get_track_pixel_points(self.outertrack)
+        in_track = self.get_track_pixel_points(self.innertrack)
+                      
         center_track = np.asarray(center_track)
         out_track = np.asarray(out_track)
         in_track = np.asarray(in_track)
@@ -179,3 +102,25 @@ class CreateTrack():
         track_image = cv2.polylines(track_image, [out_track], False, (0, 255, 0), 5)
         track_image = cv2.polylines(track_image, [in_track], False, (0, 255, 0), 5)
         return track_image
+
+    def get_track_pixel_points(self, track):
+        processed_track = []
+        if len(track) != 0:
+            for waypoint in track:
+                waypoint = [waypoint.x, waypoint.y, 0, 1]
+                cam_waypoint = np.dot(np.linalg.inv(self.t_cam_base), waypoint)
+                cam_waypoint = np.delete(cam_waypoint, -1)
+                pixel_coord_unnorm = np.dot(self.K, cam_waypoint.T)
+
+                if pixel_coord_unnorm[-1] < 0:
+                    continue
+                pixel_coord_norm = np.divide(pixel_coord_unnorm, pixel_coord_unnorm[-1]) 
+
+                # get pixel coordinates in camera view
+                px = pixel_coord_norm[0]
+                py = pixel_coord_norm[1]
+
+                processed_track.append((int(px), int(py)))
+        
+        return processed_track
+    
