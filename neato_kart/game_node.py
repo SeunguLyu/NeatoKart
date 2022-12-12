@@ -77,6 +77,7 @@ class GameNode(Node):
         self.map_size = 200
         self.map_multiplier = 0.0
         self.map_center_offset = (0,0)
+        self.map_boundary = [0.0, 0.0, 0.0, 0.0]
 
         self.map_tag_list = []
         self.map_point_list = []
@@ -173,6 +174,12 @@ class GameNode(Node):
             turtle_pose = np.dot(turtle.as_matrix(), turtle_offset)
             turtle.x = turtle_pose[0,0]
             turtle.y = turtle_pose[1,0]
+
+            if (turtle.x > self.map_boundary[0] 
+            or turtle.x < self.map_boundary[1] 
+            or turtle.y > self.map_boundary[2] 
+            or turtle.y < self.map_boundary[3]):
+                self.turtle_list.remove(turtle)
 
         if self.game_state == GameState.GAME_STOP or self.game_state == GameState.GAME_PLAY:
             self.set_robot1_control(keys)
@@ -379,8 +386,8 @@ class GameNode(Node):
             elif self.robot1_total_tag == len(self.map_tag_list) + 1:
                 self.game_state = GameState.GAME_END
             if self.robot1_item == None:
-                #self.robot1_item = random.choice(list(ItemType))
-                self.robot1_item = ItemType.TURTLE
+                self.robot1_item = random.choice(list(ItemType))
+                #self.robot1_item = ItemType.TURTLE
 
         # item related
         if self.robot1_is_rotating == False:
@@ -526,6 +533,7 @@ class GameNode(Node):
             if -map_point.y < low_x:
                 low_x = -map_point.y
         
+        self.map_boundary = [high_y, low_y, -low_x, -high_x]
         if high_x - low_x > high_y - low_y:
             self.map_multiplier = self.map_size/(high_x - low_x)
         else:
