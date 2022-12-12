@@ -9,21 +9,26 @@ from cv_bridge import CvBridge
 import cv2
 import os
 import dt_apriltags as apriltag
-from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, TransformStamped, Transform
-from neato_kart.detect_april_tag import MapPoint, get_tag_2d_pose
+from geometry_msgs.msg import PoseStamped, Pose2D, Point, Quaternion, TransformStamped, Transform
+from neato_kart.detect_april_tag import MapPoint, get_tag_2d_pose, draw_apriltag
 from neato_kart.angle_helpers import euler_from_quaternion
 import numpy as np
-import PyKDL
 import math
 import json
 from visualization_msgs.msg import Marker, MarkerArray
 from neato_kart.create_track import TrackPoint, CreateTrack
 
 class DriveNeato(Node):
-    def __init__(self, image_topic):
+    '''
+    ros2 run neato_kart drive_neato --ros-args -p robot_name:="robot"
+    '''
+    def __init__(self):
         super().__init__('drive_neato')
 
-        self.map_name = "test8.json"
+        self.declare_parameter('robot_name', '')
+        robot_name = self.get_parameter('robot_name').get_parameter_value().string_value
+
+        self.map_name = "draw_map_test.json"
         self.map_path = os.path.dirname(os.path.realpath(__file__))
         self.map_path = os.path.abspath(os.path.join(self.map_path, os.pardir))
         self.map_path = os.path.join(self.map_path, 'maps', self.map_name)
@@ -57,11 +62,19 @@ class DriveNeato(Node):
 
         self.load_map_from_json()
 
-        self.create_subscription(Image, image_topic, self.process_image, 10)
-        self.create_subscription(Odometry, "odom", self.process_odom, 10)
+        if robot_name != "":
+            robot_name += "/"
 
-        self.pub_marker = self.create_publisher(MarkerArray, 'map_markers', 10)
-        self.track_marker = self.create_publisher(MarkerArray, 'track_markers', 10)
+        self.create_subscription(Image, robot_name + "camera/image_raw", self.process_image, 10)
+        self.create_subscription(Odometry, robot_name + "odom", self.process_odom, 10)
+
+        self.pub_marker = self.create_publisher(MarkerArray, robot_name + 'map_markers', 10)
+        self.pub_image = self.create_publisher(Image, robot_name + "processed_image", 10)
+
+        self.pub_marker = self.create_publisher(MarkerArray, robot_name + 'map_markers', 10)
+        self.track_marker = self.create_publisher(MarkerArray, robot_name + 'track_markers', 10)
+        
+        self.pub_position_in_map = self.create_publisher(Pose2D, robot_name + "map_position", 10)
 
         thread = Thread(target=self.loop_wrapper)
         thread.start()
@@ -83,11 +96,24 @@ class DriveNeato(Node):
 
         self.current_pose = new_pose
 
+        if (self.map_origin != None):
+            t_base_odom = self.current_pose.as_matrix()
+            t_origin_odom = self.map_origin.as_matrix()
+            t_base_origin = np.dot(t_origin_odom.getI(), t_base_odom)
+            pose = MapPoint()
+            pose.from_matrix(t_base_origin)
+
+            final_pose = Pose2D()
+            final_pose.x = pose.x
+            final_pose.y = pose.y
+            final_pose.theta = pose.theta
+            self.pub_position_in_map.publish(final_pose)
+
     def loop_wrapper(self):
         """ This function takes care of calling the run_loop function repeatedly.
             We are using a separate thread to run the loop_wrapper to work around
             issues with single threaded executors in ROS2 """
-        cv2.namedWindow('video_window')
+        #cv2.namedWindow('video_window')
         #cv2.setMouseCallback('video_window', self.process_mouse_event)
         while True:
             self.run_loop()
@@ -130,6 +156,7 @@ class DriveNeato(Node):
 
             for r in results:
                 # check tag distance from robot, and then add when angle isn't too stiff
+                draw_apriltag(detected_image, r)
                 current_tag = None
                 for tag in self.map_tag_list:
                     if tag.tagid == r.tag_id:
@@ -151,7 +178,8 @@ class DriveNeato(Node):
                         self.update_map_in_odom()
                         break
 
-            cv2.imshow('video_window', detected_image)
+            #cv2.imshow('video_window', detected_image)
+            self.pub_image.publish(self.bridge.cv2_to_imgmsg(detected_image, "bgr8"))
             cv2.waitKey(5)
 
     def update_map_in_odom(self):
@@ -295,13 +323,9 @@ class DriveNeato(Node):
         marker.type = Marker.SPHERE
         return marker
 
-if __name__ == '__main__':
-    node = DriveNeato("/camera/image_raw")
-    node.run()
-
 def main(args=None):
     rclpy.init()
-    n = DriveNeato("camera/image_raw")
+    n = DriveNeato()
     rclpy.spin(n)
     rclpy.shutdown()
 
