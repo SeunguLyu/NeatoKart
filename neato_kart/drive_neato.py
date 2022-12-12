@@ -16,6 +16,7 @@ import numpy as np
 import math
 import json
 from visualization_msgs.msg import Marker, MarkerArray
+from neato_kart.create_track import TrackPoint, CreateTrack
 
 class DriveNeato(Node):
     '''
@@ -42,14 +43,19 @@ class DriveNeato(Node):
         self.map_tag_list = []
         self.map_point_list = []
         self.map_item_list = []
+        self.map_track_list = []
 
         self.odom_tag_list = []
         self.odom_point_list = []
         self.odom_item_list = []
+        self.odom_track_list = []
 
         self.base_tag_list = []
         self.base_point_list = []
         self.base_item_list = []
+        self.base_track_list = []
+
+        self.track = CreateTrack()
 
         self.cv_image = None                        # the latest image from the camera
         self.bridge = CvBridge()                    # used to convert ROS messages to OpenCV
@@ -65,6 +71,9 @@ class DriveNeato(Node):
         self.pub_marker = self.create_publisher(MarkerArray, robot_name + 'map_markers', 10)
         self.pub_image = self.create_publisher(Image, robot_name + "processed_image", 10)
 
+        self.pub_marker = self.create_publisher(MarkerArray, robot_name + 'map_markers', 10)
+        self.track_marker = self.create_publisher(MarkerArray, robot_name + 'track_markers', 10)
+        
         self.pub_position_in_map = self.create_publisher(Pose2D, robot_name + "map_position", 10)
 
         thread = Thread(target=self.loop_wrapper)
@@ -142,6 +151,9 @@ class DriveNeato(Node):
 
             detected_image = self.cv_image.copy()
 
+            # detected_image = self.track.draw_track((self.base_tag_list + self.base_point_list), detected_image)
+            detected_image = self.track.draw_track(self.base_point_list, detected_image)
+
             for r in results:
                 # check tag distance from robot, and then add when angle isn't too stiff
                 draw_apriltag(detected_image, r)
@@ -180,21 +192,37 @@ class DriveNeato(Node):
             odom_tag_pose = MapPoint(istag=True, tagid=tag_pose.tagid)
             odom_tag_pose.from_matrix(t_tag_odom)
             tags.append(odom_tag_pose)
-        
+        # print("Point: ")
         for point_pose in self.map_point_list:
+            # print(point_pose.x, point_pose.y, math.degrees(point_pose.theta))
             t_point_origin = point_pose.as_matrix()
             t_origin_odom = self.map_origin.as_matrix()
             t_point_odom = np.dot(t_origin_odom, t_point_origin)
             odom_point_pose = MapPoint()
             odom_point_pose.from_matrix(t_point_odom)
             points.append(odom_point_pose)
-
+        # print("Point end")
         self.odom_tag_list = tags
         self.odom_point_list = points
+
+        track_points = []
+        self.map_track_list = self.track.generate_track(0.2, self.map_tag_list + self.map_point_list)
+        # print("Track: ")
+        for track_pose in self.map_track_list:
+            # print(track_pose.x, track_pose.y, math.degrees(track_pose.theta))
+            t_track_origin = track_pose.as_matrix()
+            t_origin_odom = self.map_origin.as_matrix()
+            t_track_odom = np.dot(t_origin_odom, t_track_origin)
+            odom_point_pose = MapPoint()
+            odom_point_pose.from_matrix(t_track_odom)
+            track_points.append(odom_point_pose)
+        # print("Track end")
+        self.odom_track_list = track_points
 
         #print("Updated map in odom")
 
         self.draw_map_in_odom()
+        self.draw_track_in_odom()
 
     def draw_map_in_odom(self):
         if self.odom_point_list != None and self.odom_tag_list != None:
@@ -211,6 +239,18 @@ class DriveNeato(Node):
             
                 #print("Draw map in odom")
             self.pub_marker.publish(marker_array)
+
+    def draw_track_in_odom(self):
+        if self.odom_track_list != None:
+            marker_array = MarkerArray()
+            marker_id = 0
+            for pose in self.odom_track_list:
+                marker = self.create_track_marker(pose, marker_id)
+                marker_array.markers.append(marker)
+                marker_id += 1
+            
+                #print("Draw map in odom")
+            self.track_marker.publish(marker_array)
 
     def update_map_in_base(self):
         points = []
@@ -234,6 +274,27 @@ class DriveNeato(Node):
 
         self.base_tag_list = tags
         self.base_point_list = points
+
+    def create_track_marker(self, track_point: TrackPoint, id: int) -> Marker:
+        marker = Marker()
+        marker.header.frame_id = "odom"
+        marker.id = id
+
+        marker.color.a = 0.5
+        marker.color.r = 0.0
+        marker.color.g = 0.0
+        marker.color.b = 1.0
+
+        marker.pose.position.x = track_point.x
+        marker.pose.position.y = track_point.y
+        marker.pose.position.z = 0.0
+
+        marker.scale.x = 0.1
+        marker.scale.y = 0.1
+        marker.scale.z = 0.1
+
+        marker.type = Marker.SPHERE
+        return marker
 
     def create_map_marker(self, map_pose: MapPoint, id: int) -> Marker:
         marker = Marker()
