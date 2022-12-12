@@ -1,7 +1,6 @@
 import cv2
 import dt_apriltags as apriltag
 import numpy as np
-import PyKDL
 import math
 import json
 
@@ -79,13 +78,6 @@ def get_tag_2d_pose(r):
                                     [0, 0, 0, 1]])
 
     t_tag_base = np.dot(t_cam_base, t_tag_cam)
-
-    rot = PyKDL.Rotation(t_tag_base[0,0], t_tag_base[0,1], t_tag_base[0,2],
-                        t_tag_base[1,0], t_tag_base[1,1], t_tag_base[1,2],
-                        t_tag_base[2,0], t_tag_base[2,1], t_tag_base[2,2])
-
-    #print(np.arctan2(t_tag_base[1,2], t_tag_base[0,2]))
-    #angle = rot.GetEulerZYX()
     
     yaw = np.arctan2(t_tag_base[1,2], t_tag_base[0,2])
 

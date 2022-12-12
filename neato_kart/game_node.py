@@ -357,6 +357,11 @@ class GameNode(Node):
     
     def set_robot_control(self, keys, robot_index):
         i = robot_index
+        key_list = []
+        if i == 0:
+            key_list = [pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d, pygame.K_LSHIFT]
+        else:
+            key_list = [pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT, pygame.K_RSHIFT]
         robot_pose = self.robot_position[i]
         speed = self.normal_lin_speed
         # boost check
@@ -375,13 +380,13 @@ class GameNode(Node):
             if pygame.time.get_ticks() > self.robot_rotate_tick[i] + 3500:
                 self.robot_is_rotating[i] = False
         else:
-            if keys[pygame.K_w]:
+            if keys[key_list[0]]:
                 linear_vel += speed
-            if keys[pygame.K_s]:
+            if keys[key_list[1]]:
                 linear_vel -= speed
-            if keys[pygame.K_a] and linear_vel != 0:
+            if keys[key_list[2]] and linear_vel != 0:
                 ang_vel += self.ang_speed
-            if keys[pygame.K_d] and linear_vel != 0:
+            if keys[key_list[3]] and linear_vel != 0:
                 ang_vel -= self.ang_speed
         twt = Twist()
         twt.angular.z = ang_vel
@@ -412,11 +417,11 @@ class GameNode(Node):
         # item related
         if self.robot_is_rotating[i] == False:
             # using item
-            if keys[pygame.K_LSHIFT]:
+            if keys[key_list[4]]:
                 if self.robot_item[i] == ItemType.BANANA:
                     self.robot_item[i] = None
                     banana_offset = None
-                    if keys[pygame.K_s]:
+                    if keys[key_list[1]]:
                         banana_offset = np.matrix([[-0.2],[0],[1]])
                     else:
                         banana_offset = np.matrix([[1.5],[0],[1]])
@@ -427,7 +432,7 @@ class GameNode(Node):
                 elif self.robot_item[i] == ItemType.TURTLE:
                     self.robot_item[i] = None
                     turtle_offset = None
-                    if keys[pygame.K_s]:
+                    if keys[key_list[1]]:
                         turtle_offset = np.matrix([[-0.3],[0],[1]])
                         turtle_angle = robot_pose.theta
                         turtle_angle += math.pi

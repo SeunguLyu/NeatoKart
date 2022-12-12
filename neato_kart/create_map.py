@@ -13,7 +13,6 @@ from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, TransformSta
 from neato_kart.detect_april_tag import MapPoint, get_tag_2d_pose, draw_apriltag
 from neato_kart.angle_helpers import euler_from_quaternion
 import numpy as np
-import PyKDL
 import math
 import json
 
