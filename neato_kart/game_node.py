@@ -88,22 +88,20 @@ class GameNode(Node):
         self.ang_speed = 1.0
 
         # Item Related
-        self.robot1_item = None
+        self.robot_item = [None, None]
 
-        self.robot1_is_rotating = False
-        self.robot1_rotate_tick = 0
+        self.robot_is_rotating = [False, False]
+        self.robot_rotate_tick = [0, 0]
 
-        self.robot1_on_boost = False
-        self.robot1_boost_tick = 0
+        self.robot_on_boost = [False, False]
+        self.robot_boost_tick = [0, 0]
         self.banana_list = []
         self.turtle_list = []
 
         # Race Progress Related
-        self.robot1_position = None
-        self.robot1_current_tag = 0
-        self.robot1_total_tag = 0 
-
-        self.robot2_position = None
+        self.robot_position = [None, None]
+        self.robot_current_tag = [0, 0]
+        self.robot_total_tag = [0, 0]
 
         self.load_map_from_json()
 
@@ -127,14 +125,14 @@ class GameNode(Node):
         pose.x = msg.x
         pose.y = msg.y
         pose.theta = msg.theta
-        self.robot1_position = pose
+        self.robot_position[0] = pose
 
     def process_robot2_position(self, msg):
         pose = MapPoint()
         pose.x = msg.x
         pose.y = msg.y
         pose.theta = msg.theta
-        self.robot2_position = pose
+        self.robot_position[1] = pose
 
     def loop_wrapper(self):
         """ This function takes care of calling the run_loop function repeatedly.
@@ -191,95 +189,21 @@ class GameNode(Node):
                 self.turtle_list.remove(turtle)
 
         if self.game_state == GameState.GAME_STOP or self.game_state == GameState.GAME_PLAY:
-            self.set_robot1_control(keys)
-            self.set_robot2_control(keys)
+            self.set_robot_control(keys, 0)
+            self.set_robot_control(keys, 1)
         elif self.game_state == GameState.GAME_END:
             self.pub_robot1_vel.publish(Twist())
             self.pub_robot2_vel.publish(Twist())
         
-        self.draw_game()
-
-    def draw_game(self):
         self.display.fill((0,0,0))
-
         if not self.cv_robot1 is None:
-            # convert opencv image to pygame image
-            pygame_image = self.convert_opencv_img_to_pygame(self.cv_robot1)
-            pygame_image = pygame.transform.scale(pygame_image, (952, 714))
-
-            # Draw image
-            self.display.blit(pygame_image, (0, 0))
-
-            # draw items
-            for banana in self.banana_list:
-                dist = self.distance_from_pose(banana[0], banana[1], 1)
-                banana_base_pose = np.dot(self.robot1_position.as_matrix().getI(), np.matrix([[banana[0]],[banana[1]],[1]]))
-                if banana_base_pose[0,0] > 0.2:
-                    banana_pixel = self.position_to_img_pixel(banana_base_pose[0,0], banana_base_pose[1,0])
-                    if dist > 3.0:
-                        continue  
-                    elif dist > 2.0:
-                        size = 32
-                    else:
-                        size = 192 - 80 * dist
-                    banana_resized = pygame.transform.scale(self.image_banana, (size, size))
-                    self.display.blit(banana_resized, (banana_pixel[0]-size/2, banana_pixel[1]-size/2))
-            
-            for turtle in self.turtle_list:
-                dist = self.distance_from_pose(turtle.x, turtle.y, 1)
-                turtle_base_pose = np.dot(self.robot1_position.as_matrix().getI(), np.matrix([[turtle.x],[turtle.y],[1]]))
-                if turtle_base_pose[0,0] > 0.2:
-                    turtle_pixel = self.position_to_img_pixel(turtle_base_pose[0,0], turtle_base_pose[1,0])
-                    if dist > 3.0:
-                        continue  
-                    elif dist > 2.0:
-                        size = 32
-                    else:
-                        size = 192 - 80 * dist
-                    turtle_resized = pygame.transform.scale(self.image_turtle, (size, size))
-                    self.display.blit(turtle_resized, (turtle_pixel[0]-size/2, turtle_pixel[1]-size/2))
-
-            # draw map
-            self.draw_map_at_point((820,580))
-
-            # draw item UI
-            item_ui_origin = (10,10)
-            pygame.draw.lines(self.display, (200, 200, 200, 200), True, 
-                                [item_ui_origin, 
-                                (item_ui_origin[0] + 100, item_ui_origin[1]), 
-                                (item_ui_origin[0] + 100, item_ui_origin[1] + 100),
-                                (item_ui_origin[0], item_ui_origin[1] + 100)]
-                                , 5)
-            
-            if self.robot1_item == ItemType.BANANA:
-                banana_resized = pygame.transform.scale(self.image_banana, (80, 80))
-                self.display.blit(banana_resized, (item_ui_origin[0] + 10, item_ui_origin[1] + 10))
-            elif self.robot1_item == ItemType.TURTLE:
-                turtle_resized = pygame.transform.scale(self.image_turtle, (80, 80))
-                self.display.blit(turtle_resized, (item_ui_origin[0] + 10, item_ui_origin[1] + 10))
-            elif self.robot1_item == ItemType.BOOST:
-                boost_resized = pygame.transform.scale(self.image_boost, (80, 80))
-                self.display.blit(boost_resized, (item_ui_origin[0] + 10, item_ui_origin[1] + 10))
-
-            # draw checkpoint progress
-            circle_distance = 60
-            total_tag = len(self.map_tag_list) + 1
-            start_point = [476 - (total_tag-1)*circle_distance/2, 60]
-            for i in range(total_tag):
-                width = 5
-                if self.robot1_total_tag >= i + 1:
-                    width = 0
-                pygame.draw.circle(self.display, (79, 238, 77, 255), start_point, 20, width)
-                start_point[0] += circle_distance
-
+            self.draw_robot_ui(0)
         if not self.cv_robot2 is None:
-            pygame_image = self.convert_opencv_img_to_pygame(self.cv_robot2)
-            pygame_image = pygame.transform.scale(pygame_image, (952, 714))
+            self.draw_robot_ui(1)
+        self.draw_game_global()
+        pygame.display.update()
 
-            # #Draw image
-            self.display.blit(pygame_image, (self.p2_offset, 0))
-            self.draw_map_at_point((730 + self.p2_offset, 510))
-
+    def draw_game_global(self):
         if self.game_state == GameState.GAME_STOP:
             pass    
         elif self.game_state == GameState.GAME_COUNT:
@@ -314,8 +238,86 @@ class GameNode(Node):
             screen_rect = self.display.get_rect()
             image_rect.center = screen_rect.center
             self.display.blit(self.image_end, image_rect)
+    
+    def draw_robot_ui(self, robot_index):
+        i = robot_index
+        offset = 0
+        robot_image = None
+        robot_pose = self.robot_position[i]
+        if i == 0:
+            robot_image = self.cv_robot1
+        else:
+            robot_image = self.cv_robot2
+            offset += self.p2_offset
+
+        # convert opencv image to pygame image
+        pygame_image = self.convert_opencv_img_to_pygame(robot_image)
+        pygame_image = pygame.transform.scale(pygame_image, (952, 714))
+
+        # Draw image
+        self.display.blit(pygame_image, (offset, 0))
+
+        # draw items
+        for banana in self.banana_list:
+            dist = self.distance_from_pose(banana[0], banana[1], i)
+            banana_base_pose = np.dot(robot_pose.as_matrix().getI(), np.matrix([[banana[0]],[banana[1]],[1]]))
+            if banana_base_pose[0,0] > 0.2:
+                banana_pixel = self.position_to_img_pixel(banana_base_pose[0,0], banana_base_pose[1,0])
+                if dist > 3.0:
+                    continue  
+                elif dist > 2.0:
+                    size = 32
+                else:
+                    size = 192 - 80 * dist
+                banana_resized = pygame.transform.scale(self.image_banana, (size, size))
+                self.display.blit(banana_resized, (offset+banana_pixel[0]-size/2, banana_pixel[1]-size/2))
         
-        pygame.display.update()
+        for turtle in self.turtle_list:
+            dist = self.distance_from_pose(turtle.x, turtle.y, i)
+            turtle_base_pose = np.dot(robot_pose.as_matrix().getI(), np.matrix([[turtle.x],[turtle.y],[1]]))
+            if turtle_base_pose[0,0] > 0.2:
+                turtle_pixel = self.position_to_img_pixel(turtle_base_pose[0,0], turtle_base_pose[1,0])
+                if dist > 3.0:
+                    continue  
+                elif dist > 2.0:
+                    size = 32
+                else:
+                    size = 192 - 80 * dist
+                turtle_resized = pygame.transform.scale(self.image_turtle, (size, size))
+                self.display.blit(turtle_resized, (offset+turtle_pixel[0]-size/2, turtle_pixel[1]-size/2))
+
+        # draw map
+        self.draw_map_at_point((820 + offset,580))
+
+        # draw item UI
+        item_ui_origin = (10 + offset, 10)
+        pygame.draw.lines(self.display, (200, 200, 200, 200), True, 
+                            [item_ui_origin, 
+                            (item_ui_origin[0] + 100, item_ui_origin[1]), 
+                            (item_ui_origin[0] + 100, item_ui_origin[1] + 100),
+                            (item_ui_origin[0], item_ui_origin[1] + 100)]
+                            , 5)
+        
+        if self.robot_item[i] == ItemType.BANANA:
+            banana_resized = pygame.transform.scale(self.image_banana, (80, 80))
+            self.display.blit(banana_resized, (item_ui_origin[0] + 10, item_ui_origin[1] + 10))
+        elif self.robot_item[i] == ItemType.TURTLE:
+            turtle_resized = pygame.transform.scale(self.image_turtle, (80, 80))
+            self.display.blit(turtle_resized, (item_ui_origin[0] + 10, item_ui_origin[1] + 10))
+        elif self.robot_item[i] == ItemType.BOOST:
+            boost_resized = pygame.transform.scale(self.image_boost, (80, 80))
+            self.display.blit(boost_resized, (item_ui_origin[0] + 10, item_ui_origin[1] + 10))
+
+        # draw checkpoint progress
+        circle_distance = 60
+        total_tag = len(self.map_tag_list) + 1
+        start_point = [offset + 476 - (total_tag-1)*circle_distance/2, 60]
+        for j in range(total_tag):
+            width = 5
+            if self.robot_total_tag[i] >= j + 1:
+                width = 0
+            pygame.draw.circle(self.display, (79, 238, 77, 255), start_point, 20, width)
+            start_point[0] += circle_distance
 
     def convert_opencv_img_to_pygame(self, opencv_image):
         opencv_image = opencv_image[:,:,::-1]  #Since OpenCV is BGR and pygame is RGB, it is necessary to convert it.
@@ -341,12 +343,8 @@ class GameNode(Node):
 
         return (pixel_in_img[0,0]/pixel_in_img[2,0], pixel_in_img[1,0]/pixel_in_img[2,0])
     
-    def distance_from_pose(self, x, y, robot):
-        robot_pose = None
-        if robot == 1:
-            robot_pose = self.robot1_position
-        else:
-            robot_pose = self.robot2_position
+    def distance_from_pose(self, x, y, robot_index):
+        robot_pose = self.robot_position[robot_index]
 
         if robot_pose == None:
             return 10000.0
@@ -357,12 +355,14 @@ class GameNode(Node):
 
         return dist
     
-    def set_robot1_control(self, keys):
+    def set_robot_control(self, keys, robot_index):
+        i = robot_index
+        robot_pose = self.robot_position[i]
         speed = self.normal_lin_speed
         # boost check
-        if self.robot1_on_boost:
-            if pygame.time.get_ticks() > self.robot1_boost_tick + 5000:
-                self.robot1_on_boost = False
+        if self.robot_on_boost[i]:
+            if pygame.time.get_ticks() > self.robot_boost_tick[i] + 5000:
+                self.robot_on_boost[i] = False
             else:
                 speed = self.boost_lin_speed
 
@@ -370,10 +370,10 @@ class GameNode(Node):
         linear_vel = 0.0
         ang_vel = 0.0
 
-        if self.robot1_is_rotating:
+        if self.robot_is_rotating[i]:
             ang_vel = 2.0
-            if pygame.time.get_ticks() > self.robot1_rotate_tick + 3500:
-                self.robot1_is_rotating = False
+            if pygame.time.get_ticks() > self.robot_rotate_tick[i] + 3500:
+                self.robot_is_rotating[i] = False
         else:
             if keys[pygame.K_w]:
                 linear_vel += speed
@@ -387,97 +387,80 @@ class GameNode(Node):
         twt.angular.z = ang_vel
         twt.linear.x = linear_vel
 
-        self.pub_robot1_vel.publish(twt)
+        if i == 0:
+            self.pub_robot1_vel.publish(twt)
+        else:
+            self.pub_robot2_vel.publish(twt)
 
         if self.game_state == GameState.GAME_STOP:
             return
 
         # checkpoint check
-        next_point = self.map_tag_list[self.robot1_current_tag]
-        checkpoint_dist = self.distance_from_pose(next_point.x, next_point.y, 1)
+        next_point = self.map_tag_list[self.robot_current_tag[i]]
+        checkpoint_dist = self.distance_from_pose(next_point.x, next_point.y, i)
         if checkpoint_dist < 0.3:
-            self.robot1_current_tag += 1
-            self.robot1_total_tag += 1
-            if self.robot1_current_tag == len(self.map_tag_list):
-                self.robot1_current_tag = 0
-            elif self.robot1_total_tag == len(self.map_tag_list) + 1:
+            self.robot_current_tag[i] += 1
+            self.robot_total_tag[i] += 1
+            if self.robot_current_tag[i] == len(self.map_tag_list):
+                self.robot_current_tag[i] = 0
+            elif self.robot_total_tag[i] == len(self.map_tag_list) + 1:
                 self.game_state = GameState.GAME_END
-            if self.robot1_item == None:
-                self.robot1_item = random.choice(list(ItemType))
+            if self.robot_item[i] == None:
+                self.robot_item[i] = random.choice(list(ItemType))
                 #self.robot1_item = ItemType.TURTLE
 
         # item related
-        if self.robot1_is_rotating == False:
+        if self.robot_is_rotating[i] == False:
             # using item
             if keys[pygame.K_LSHIFT]:
-                if self.robot1_item == ItemType.BANANA:
-                    self.robot1_item = None
+                if self.robot_item[i] == ItemType.BANANA:
+                    self.robot_item[i] = None
                     banana_offset = None
                     if keys[pygame.K_s]:
                         banana_offset = np.matrix([[-0.2],[0],[1]])
                     else:
                         banana_offset = np.matrix([[1.5],[0],[1]])
-                    banana_pose = np.dot(self.robot1_position.as_matrix(), banana_offset)
+
+                    banana_pose = np.dot(robot_pose.as_matrix(), banana_offset)
                     self.banana_list.append((banana_pose[0,0], banana_pose[1,0]))
                 
-                elif self.robot1_item == ItemType.TURTLE:
-                    self.robot1_item = None
+                elif self.robot_item[i] == ItemType.TURTLE:
+                    self.robot_item[i] = None
                     turtle_offset = None
                     if keys[pygame.K_s]:
                         turtle_offset = np.matrix([[-0.3],[0],[1]])
-                        turtle_angle = self.robot1_position.theta
+                        turtle_angle = robot_pose.theta
                         turtle_angle += math.pi
                         if (turtle_angle) >= math.pi * 2:
                             turtle_angle -= math.pi * 2
                     else:
                         turtle_offset = np.matrix([[0.3],[0],[1]])
-                        turtle_angle = self.robot1_position.theta
-                    turtle_pose = np.dot(self.robot1_position.as_matrix(), turtle_offset)
+                        turtle_angle = robot_pose.theta
+                    turtle_pose = np.dot(robot_pose.as_matrix(), turtle_offset)
                     turtle_point = MapPoint(turtle_pose[0,0], turtle_pose[1,0], turtle_angle)
                     self.turtle_list.append(turtle_point)
                 
-                elif self.robot1_item == ItemType.BOOST:
-                    self.robot1_item = None
-                    self.robot1_on_boost = True
-                    self.robot1_boost_tick = pygame.time.get_ticks()
+                elif self.robot_item[i] == ItemType.BOOST:
+                    self.robot_item[i] = None
+                    self.robot_on_boost[i] = True
+                    self.robot_boost_tick[i] = pygame.time.get_ticks()
 
             # detect if robot is colliding with items
             for banana in self.banana_list:
-                dist = self.distance_from_pose(banana[0], banana[1], 1)
+                dist = self.distance_from_pose(banana[0], banana[1], i)
                 if dist < 0.1:
-                    self.robot1_is_rotating = True
+                    self.robot_is_rotating[i] = True
                     self.banana_list.remove(banana)
-                    self.robot1_rotate_tick = pygame.time.get_ticks()
+                    self.robot_rotate_tick[i] = pygame.time.get_ticks()
                     break
             
             for turtle in self.turtle_list:
-                dist = self.distance_from_pose(turtle.x, turtle.y, 1)
+                dist = self.distance_from_pose(turtle.x, turtle.y, i)
                 if dist < 0.2:
-                    self.robot1_is_rotating = True
+                    self.robot_is_rotating[i] = True
                     self.turtle_list.remove(turtle)
-                    self.robot1_rotate_tick = pygame.time.get_ticks()
+                    self.robot_rotate_tick[i] = pygame.time.get_ticks()
                     break
-            
-            for turtle in self.turtle_list:
-                dist
-
-    def set_robot2_control(self, keys):
-        linear_vel = 0.0
-        ang_vel = 0.0
-
-        if keys[pygame.K_UP]:
-            linear_vel += 0.3
-        if keys[pygame.K_DOWN]:
-            linear_vel -= 0.3
-        if keys[pygame.K_LEFT] and linear_vel != 0:
-            ang_vel += 1.0
-        if keys[pygame.K_RIGHT] and linear_vel != 0:
-            ang_vel -= 1.0
-        twt = Twist()
-        twt.angular.z = ang_vel
-        twt.linear.x = linear_vel
-
-        self.pub_robot2_vel.publish(twt)
     
     def draw_map_at_point(self, center):
         map_half = self.map_size/2 + 20
@@ -520,11 +503,17 @@ class GameNode(Node):
 
             pygame.draw.circle(self.display, (0,255,0), (point_x, point_y), 5.0)
 
-        if (self.robot1_position != None):
-            point_x = map_center[0] - self.robot1_position.y * self.map_multiplier
-            point_y = map_center[1] - self.robot1_position.x * self.map_multiplier
+        if (self.robot_position[0] != None):
+            point_x = map_center[0] - self.robot_position[0].y * self.map_multiplier
+            point_y = map_center[1] - self.robot_position[0].x * self.map_multiplier
 
             pygame.draw.circle(self.display, (0,0,255), (point_x, point_y), 10.0)
+        
+        if (self.robot_position[1] != None):
+            point_x = map_center[0] - self.robot_position[1].y * self.map_multiplier
+            point_y = map_center[1] - self.robot_position[1].x * self.map_multiplier
+
+            pygame.draw.circle(self.display, (0,128,128), (point_x, point_y), 10.0)
 
     def load_map_from_json(self):
         data = []
