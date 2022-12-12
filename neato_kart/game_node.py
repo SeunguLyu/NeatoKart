@@ -82,10 +82,19 @@ class GameNode(Node):
         self.map_tag_list = []
         self.map_point_list = []
 
+        # Game Related
+        self.normal_lin_speed = 0.3
+        self.boost_lin_speed = 0.9
+        self.ang_speed = 1.0
+
         # Item Related
         self.robot1_item = None
+
         self.robot1_is_rotating = False
         self.robot1_rotate_tick = 0
+
+        self.robot1_on_boost = False
+        self.robot1_boost_tick = 0
         self.banana_list = []
         self.turtle_list = []
 
@@ -349,6 +358,14 @@ class GameNode(Node):
         return dist
     
     def set_robot1_control(self, keys):
+        speed = self.normal_lin_speed
+        # boost check
+        if self.robot1_on_boost:
+            if pygame.time.get_ticks() > self.robot1_boost_tick + 5000:
+                self.robot1_on_boost = False
+            else:
+                speed = self.boost_lin_speed
+
         # neato speed related
         linear_vel = 0.0
         ang_vel = 0.0
@@ -359,13 +376,13 @@ class GameNode(Node):
                 self.robot1_is_rotating = False
         else:
             if keys[pygame.K_w]:
-                linear_vel += 0.6
+                linear_vel += speed
             if keys[pygame.K_s]:
-                linear_vel -= 0.6
+                linear_vel -= speed
             if keys[pygame.K_a] and linear_vel != 0:
-                ang_vel += 1.0
+                ang_vel += self.ang_speed
             if keys[pygame.K_d] and linear_vel != 0:
-                ang_vel -= 1.0
+                ang_vel -= self.ang_speed
         twt = Twist()
         twt.angular.z = ang_vel
         twt.linear.x = linear_vel
@@ -418,6 +435,11 @@ class GameNode(Node):
                     turtle_pose = np.dot(self.robot1_position.as_matrix(), turtle_offset)
                     turtle_point = MapPoint(turtle_pose[0,0], turtle_pose[1,0], turtle_angle)
                     self.turtle_list.append(turtle_point)
+                
+                elif self.robot1_item == ItemType.BOOST:
+                    self.robot1_item = None
+                    self.robot1_on_boost = True
+                    self.robot1_boost_tick = pygame.time.get_ticks()
 
             # detect if robot is colliding with items
             for banana in self.banana_list:
