@@ -182,8 +182,9 @@ class GameNode(Node):
         if self.game_state == GameState.GAME_TITLE:
             if keys[pygame.K_SPACE]:
                 self.game_state = GameState.GAME_STOP
+                self.title_tick = pygame.time.get_ticks()
         elif self.game_state == GameState.GAME_STOP:
-            if keys[pygame.K_SPACE]:
+            if keys[pygame.K_SPACE] and self.title_tick + 500 < pygame.time.get_ticks():
                 self.game_state = GameState.GAME_COUNT
                 pygame.mixer.Sound.play(self.start_sound)
                 self.game_tick = pygame.time.get_ticks()          
