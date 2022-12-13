@@ -1,5 +1,9 @@
 # NeatoKart
 
+## Introduction
+
+## Demo
+
 ## Run
 1. Follow steps in this [page](https://comprobo22.github.io/How%20to/setup_your_environment) to set up the environment
 2. Clone [neato_packages](https://github.com/SeunguLyu/neato_packages.git) in the ros2 src folder
@@ -9,7 +13,6 @@
 pip install pygame
 pip install dt-apriltags
 ```
-
 ### Simulation
 1. Run the following command to start gazebo
 ```
@@ -47,6 +50,8 @@ ros2 run neato_kart create_map --ros-args -p robot_name:="robot1"
 5. Change self.map_name in drive_neato.py to the name of the saved map. Run two seperate drive_neato node with following commands:
 ```
 ros2 run neato_kart drive_neato --ros-args -p robot_name:="robot1"
+```
+```
 ros2 run neato_kart drive_neato --ros-args -p robot_name:="robot2"
 ```
 6. While drive_neato nodes are running, run the game_node
@@ -75,4 +80,27 @@ LEFT: Steer Left
 RIGHT: Steer Right
 R_SHIFT: Use Item
 ```
-## Creating Map
+## Guide
+### Creating Checkpoints
+### Creating Map
+### Start Race
+## Rules
+### Items
+1. Banana
+2. Turtle
+3. Boost
+### Track
+### Minimap
+### AprilTag
+
+## Structure
+
+
+## System architecture
+ROS topic diagram, what each topic does, opencv + pygame, apriltag localization, frame transformation
+
+## Project Stories
+Story 1
+Story 2
+Story 3
+
