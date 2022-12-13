@@ -170,7 +170,6 @@ if __name__ == '__main__':
     node.run()
 
 def main(args=None):
-    print(args)
     rclpy.init()
     n = CreateMap("camera/image_raw")
     rclpy.spin(n)
