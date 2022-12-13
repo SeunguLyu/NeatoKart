@@ -18,10 +18,11 @@ import random
 import math
 
 class GameState(Enum):
-    GAME_STOP = 1
-    GAME_COUNT = 2
-    GAME_PLAY = 3
-    GAME_END = 4
+    GAME_TITLE = 1
+    GAME_STOP = 2
+    GAME_COUNT = 3
+    GAME_PLAY = 4
+    GAME_END = 5
 
 class ItemType(Enum):
     BANANA = 1
@@ -68,6 +69,8 @@ class GameNode(Node):
         self.window_width = 1920
         self.window_height = 714
 
+        self.title_tick = 0
+
         # Minimap Related
         self.map_name = "real_map.json"
         self.map_path = os.path.dirname(os.path.realpath(__file__))
@@ -105,7 +108,7 @@ class GameNode(Node):
 
         self.load_map_from_json()
 
-        self.game_state = GameState.GAME_STOP
+        self.game_state = GameState.GAME_TITLE
 
         thread = Thread(target=self.loop_wrapper)
         thread.start()
@@ -147,6 +150,11 @@ class GameNode(Node):
 
         self.start_sound = pygame.mixer.Sound(os.path.join(self.asset_directory, 'sound', 'beeping.mp3'))
         self.start_sound.set_volume(0.25)
+        
+        self.image_background = pygame.image.load(os.path.join(self.asset_directory, 'images', 'background.png'))
+        self.image_title = pygame.image.load(os.path.join(self.asset_directory, 'images', 'neatokart.png'))
+        self.image_neato = pygame.image.load(os.path.join(self.asset_directory, 'images', 'neato.png'))
+        self.image_press = pygame.image.load(os.path.join(self.asset_directory, 'images', 'press.png'))
 
         self.image_one = pygame.image.load(os.path.join(self.asset_directory, 'images', '1.png'))
         self.image_two = pygame.image.load(os.path.join(self.asset_directory, 'images', '2.png'))
@@ -171,7 +179,10 @@ class GameNode(Node):
                 pygame.quit()
                 sys.exit()
 
-        if self.game_state == GameState.GAME_STOP:
+        if self.game_state == GameState.GAME_TITLE:
+            if keys[pygame.K_SPACE]:
+                self.game_state = GameState.GAME_STOP
+        elif self.game_state == GameState.GAME_STOP:
             if keys[pygame.K_SPACE]:
                 self.game_state = GameState.GAME_COUNT
                 pygame.mixer.Sound.play(self.start_sound)
@@ -208,7 +219,34 @@ class GameNode(Node):
         pygame.display.update()
 
     def draw_game_global(self):
-        if self.game_state == GameState.GAME_STOP:
+        if self.game_state == GameState.GAME_TITLE:
+            self.display.blit(self.image_background, (0,0))
+
+            image_rect = self.image_title.get_rect()
+            screen_rect = self.display.get_rect()
+            image_rect.center = screen_rect.center
+            image_rect.centery -= 240
+            self.display.blit(self.image_title, image_rect)
+
+            neato = pygame.transform.scale(self.image_neato, (350, 350))
+            image_rect = neato.get_rect()
+            screen_rect = self.display.get_rect()
+            image_rect.center = screen_rect.center
+            image_rect.centery -= 20
+            self.display.blit(neato, image_rect)
+
+            if pygame.time.get_ticks() < self.title_tick + 1000:
+                image_rect = self.image_press.get_rect()
+                screen_rect = self.display.get_rect()
+                image_rect.center = screen_rect.center
+                image_rect.centery += 220
+                self.display.blit(self.image_press, image_rect)
+            elif pygame.time.get_ticks() < self.title_tick + 2000:
+                pass
+            else:
+                self.title_tick = pygame.time.get_ticks()
+
+        elif self.game_state == GameState.GAME_STOP:
             pass    
         elif self.game_state == GameState.GAME_COUNT:
             if pygame.time.get_ticks() < self.game_tick + 500:
