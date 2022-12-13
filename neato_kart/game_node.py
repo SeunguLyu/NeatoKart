@@ -69,7 +69,7 @@ class GameNode(Node):
         self.window_height = 714
 
         # Minimap Related
-        self.map_name = "draw_map_test.json"
+        self.map_name = "real_map.json"
         self.map_path = os.path.dirname(os.path.realpath(__file__))
         self.map_path = os.path.abspath(os.path.join(self.map_path, os.pardir))
         self.map_path = os.path.join(self.map_path, 'maps', self.map_name)
@@ -83,8 +83,8 @@ class GameNode(Node):
         self.map_point_list = []
 
         # Game Related
-        self.normal_lin_speed = 0.3
-        self.boost_lin_speed = 0.9
+        self.normal_lin_speed = 0.2
+        self.boost_lin_speed = 0.3
         self.ang_speed = 1.0
 
         # Item Related
@@ -162,6 +162,7 @@ class GameNode(Node):
         while True:
             self.run_loop()
             time.sleep(0.05)
+            #pygame.time.wait(50)
 
     def run_loop(self):
         keys = pygame.key.get_pressed()
@@ -177,7 +178,7 @@ class GameNode(Node):
                 self.game_tick = pygame.time.get_ticks()          
 
         for turtle in self.turtle_list:
-            turtle_offset = np.matrix([[0.03],[0],[1]])
+            turtle_offset = np.matrix([[0.05],[0],[1]])
             turtle_pose = np.dot(turtle.as_matrix(), turtle_offset)
             turtle.x = turtle_pose[0,0]
             turtle.y = turtle_pose[1,0]
@@ -192,8 +193,11 @@ class GameNode(Node):
             self.set_robot_control(keys, 0)
             self.set_robot_control(keys, 1)
         elif self.game_state == GameState.GAME_END:
-            self.pub_robot1_vel.publish(Twist())
-            self.pub_robot2_vel.publish(Twist())
+            twt = Twist()
+            twt.linear.x = 0.0
+            twt.angular.z = 0.0
+            self.pub_robot1_vel.publish(twt)
+            self.pub_robot2_vel.publish(twt)
         
         self.display.fill((0,0,0))
         if not self.cv_robot1 is None:
@@ -403,7 +407,7 @@ class GameNode(Node):
         # checkpoint check
         next_point = self.map_tag_list[self.robot_current_tag[i]]
         checkpoint_dist = self.distance_from_pose(next_point.x, next_point.y, i)
-        if checkpoint_dist < 0.3:
+        if checkpoint_dist < 0.4:
             self.robot_current_tag[i] += 1
             self.robot_total_tag[i] += 1
             if self.robot_current_tag[i] == len(self.map_tag_list):
@@ -422,9 +426,9 @@ class GameNode(Node):
                     self.robot_item[i] = None
                     banana_offset = None
                     if keys[key_list[1]]:
-                        banana_offset = np.matrix([[-0.2],[0],[1]])
+                        banana_offset = np.matrix([[-0.3],[0],[1]])
                     else:
-                        banana_offset = np.matrix([[1.5],[0],[1]])
+                        banana_offset = np.matrix([[1.0],[0],[1]])
 
                     banana_pose = np.dot(robot_pose.as_matrix(), banana_offset)
                     self.banana_list.append((banana_pose[0,0], banana_pose[1,0]))

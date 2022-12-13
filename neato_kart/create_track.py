@@ -23,7 +23,7 @@ class CreateTrack():
     def __init__(self):
         # super().__init__('create_track')
         
-        self.d = 1
+        self.d = 2
         self.l = 1
         self.waypoints = []
         self.outertrack = []

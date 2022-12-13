@@ -28,7 +28,7 @@ class DriveNeato(Node):
         self.declare_parameter('robot_name', '')
         robot_name = self.get_parameter('robot_name').get_parameter_value().string_value
 
-        self.map_name = "draw_map_test.json"
+        self.map_name = "real_map.json"
         self.map_path = os.path.dirname(os.path.realpath(__file__))
         self.map_path = os.path.abspath(os.path.join(self.map_path, os.pardir))
         self.map_path = os.path.join(self.map_path, 'maps', self.map_name)
@@ -68,11 +68,10 @@ class DriveNeato(Node):
         self.create_subscription(Image, robot_name + "camera/image_raw", self.process_image, 10)
         self.create_subscription(Odometry, robot_name + "odom", self.process_odom, 10)
 
-        self.pub_marker = self.create_publisher(MarkerArray, robot_name + 'map_markers', 10)
+        #self.pub_marker = self.create_publisher(MarkerArray, robot_name + 'map_markers', 10)
         self.pub_image = self.create_publisher(Image, robot_name + "processed_image", 10)
 
-        self.pub_marker = self.create_publisher(MarkerArray, robot_name + 'map_markers', 10)
-        self.track_marker = self.create_publisher(MarkerArray, robot_name + 'track_markers', 10)
+        #self.track_marker = self.create_publisher(MarkerArray, robot_name + 'track_markers', 10)
         
         self.pub_position_in_map = self.create_publisher(Pose2D, robot_name + "map_position", 10)
 
@@ -119,7 +118,7 @@ class DriveNeato(Node):
             self.run_loop()
             if (self.odom_point_list != None):
                 self.update_map_in_base()
-            time.sleep(0.1)
+            time.sleep(0.05)
 
     # def process_mouse_event(self, event, x,y,flags,param):
     #     """ """
@@ -147,7 +146,7 @@ class DriveNeato(Node):
     def run_loop(self):
         if not self.cv_image is None:
             gray = cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2GRAY)
-            results = self.detector.detect(gray, estimate_tag_pose = True, camera_params=self.camera_param, tag_size = 0.09)
+            results = self.detector.detect(gray, estimate_tag_pose = True, camera_params=self.camera_param, tag_size = 0.093)
 
             detected_image = self.cv_image.copy()
 
@@ -221,8 +220,8 @@ class DriveNeato(Node):
 
         #print("Updated map in odom")
 
-        self.draw_map_in_odom()
-        self.draw_track_in_odom()
+        #self.draw_map_in_odom()
+        #self.draw_track_in_odom()
 
     def draw_map_in_odom(self):
         if self.odom_point_list != None and self.odom_tag_list != None:

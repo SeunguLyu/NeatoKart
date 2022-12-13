@@ -28,7 +28,7 @@ class CreateMap(Node):
         self.isVideo = False
         self.video_name = "april_tag_test3.avi"
 
-        self.map_name = "test9.json"
+        self.map_name = "real_map.json"
         self.map_path = os.path.dirname(os.path.realpath(__file__))
         self.map_path = os.path.abspath(os.path.join(self.map_path, os.pardir))
         self.map_path = os.path.join(self.map_path, 'maps', self.map_name)
@@ -140,7 +140,7 @@ class CreateMap(Node):
     def run_loop(self):
         if not self.cv_image is None:
             gray = cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2GRAY)
-            results = self.detector.detect(gray, estimate_tag_pose = True, camera_params=self.camera_param, tag_size = 0.09)
+            results = self.detector.detect(gray, estimate_tag_pose = True, camera_params=self.camera_param, tag_size = 0.093)
         
             detected_image = self.cv_image.copy()
             
