@@ -169,8 +169,8 @@ class GameNode(Node):
         pygame.display.set_caption('Neato Kart')
         while True:
             self.run_loop()
-            time.sleep(0.05)
-            #pygame.time.wait(50)
+            #time.sleep(0.05)
+            pygame.time.wait(66)
 
     def run_loop(self):
         keys = pygame.key.get_pressed()

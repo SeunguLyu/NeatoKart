@@ -36,7 +36,7 @@ class DriveNeato(Node):
         self.detector = apriltag.Detector(families="tag36h11", nthreads=2)
         self.camera_param = [971.646825, 972.962863, 501.846472, 402.829241]
 
-        self.tag_required_distance = 3.0
+        self.tag_required_distance = 2.0
 
         self.current_pose = None
         self.map_origin = None
@@ -118,7 +118,7 @@ class DriveNeato(Node):
             self.run_loop()
             if (self.odom_point_list != None):
                 self.update_map_in_base()
-            time.sleep(0.05)
+            #time.sleep(0.05)
 
     # def process_mouse_event(self, event, x,y,flags,param):
     #     """ """
@@ -146,6 +146,7 @@ class DriveNeato(Node):
     def run_loop(self):
         if not self.cv_image is None:
             gray = cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2GRAY)
+            start = time.time()
             results = self.detector.detect(gray, estimate_tag_pose = True, camera_params=self.camera_param, tag_size = 0.093)
 
             detected_image = self.cv_image.copy()
@@ -179,7 +180,7 @@ class DriveNeato(Node):
 
             #cv2.imshow('video_window', detected_image)
             self.pub_image.publish(self.bridge.cv2_to_imgmsg(detected_image, "bgr8"))
-            cv2.waitKey(5)
+            print("april tag detection time: {0}".format(time.time() - start))
 
     def update_map_in_odom(self):
         tags = []

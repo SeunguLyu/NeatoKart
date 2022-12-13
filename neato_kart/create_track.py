@@ -94,13 +94,17 @@ class CreateTrack():
         out_track = self.get_track_pixel_points(self.outertrack)
         in_track = self.get_track_pixel_points(self.innertrack)
                       
-        center_track = np.asarray(center_track)
-        out_track = np.asarray(out_track)
-        in_track = np.asarray(in_track)
+        # center_track = np.asarray(center_track)
+        # out_track = np.asarray(out_track)
+        # in_track = np.asarray(in_track)
 
-        track_image = cv2.polylines(track_image, [center_track], True, (255, 0, 0), 5)
-        track_image = cv2.polylines(track_image, [out_track], True, (0, 255, 0), 5)
-        track_image = cv2.polylines(track_image, [in_track], True, (0, 255, 0), 5)
+        # track_image = cv2.polylines(track_image, [center_track], True, (255, 0, 0), 5)
+        # track_image = cv2.polylines(track_image, [out_track], True, (0, 255, 0), 5)
+        # track_image = cv2.polylines(track_image, [in_track], True, (0, 255, 0), 5)
+
+        self.draw_continuous_line(track_image, center_track, (255,255,255))
+        self.draw_continuous_line(track_image, out_track, (0,255,0))
+        self.draw_continuous_line(track_image, in_track, (0,255,0))
         return track_image
 
     def get_track_pixel_points(self, track):
@@ -113,6 +117,7 @@ class CreateTrack():
                 pixel_coord_unnorm = np.dot(self.K, cam_waypoint.T)
 
                 if pixel_coord_unnorm[-1] < 0:
+                    processed_track.append(None)
                     continue
                 pixel_coord_norm = np.divide(pixel_coord_unnorm, pixel_coord_unnorm[-1]) 
 
@@ -124,3 +129,7 @@ class CreateTrack():
         
         return processed_track
     
+    def draw_continuous_line(self, image, track, color):
+        for i in range(len(track)-1):
+            if track[i] != None and track[i+1] != None:
+                cv2.line(image, track[i], track[i+1], color, 5)
