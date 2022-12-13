@@ -183,10 +183,10 @@ class GameNode(Node):
             turtle.x = turtle_pose[0,0]
             turtle.y = turtle_pose[1,0]
 
-            if (turtle.x > self.map_boundary[0] 
-            or turtle.x < self.map_boundary[1] 
-            or turtle.y > self.map_boundary[2] 
-            or turtle.y < self.map_boundary[3]):
+            if (turtle.x > self.map_boundary[0] + 1 
+            or turtle.x < self.map_boundary[1] - 1 
+            or turtle.y > self.map_boundary[2] + 1 
+            or turtle.y < self.map_boundary[3] - 1):
                 self.turtle_list.remove(turtle)
 
         if self.game_state == GameState.GAME_STOP or self.game_state == GameState.GAME_PLAY:
@@ -274,7 +274,10 @@ class GameNode(Node):
                 else:
                     size = 192 - 80 * dist
                 banana_resized = pygame.transform.scale(self.image_banana, (size, size))
-                self.display.blit(banana_resized, (offset+banana_pixel[0]-size/2, banana_pixel[1]-size/2))
+                if (banana_pixel[0]-size/2 < 0) or (banana_pixel[0]-size/2 > 952):
+                    pass
+                else:
+                    self.display.blit(banana_resized, (offset+banana_pixel[0]-size/2, banana_pixel[1]-size/2))
         
         for turtle in self.turtle_list:
             dist = self.distance_from_pose(turtle.x, turtle.y, i)
@@ -288,7 +291,10 @@ class GameNode(Node):
                 else:
                     size = 192 - 80 * dist
                 turtle_resized = pygame.transform.scale(self.image_turtle, (size, size))
-                self.display.blit(turtle_resized, (offset+turtle_pixel[0]-size/2, turtle_pixel[1]-size/2))
+                if (turtle_pixel[0]-size/2 < 0) or (turtle_pixel[0]-size/2 > 952):
+                    pass
+                else:
+                    self.display.blit(turtle_resized, (offset+turtle_pixel[0]-size/2, turtle_pixel[1]-size/2))
 
         # draw map
         self.draw_map_at_point((820 + offset,580))

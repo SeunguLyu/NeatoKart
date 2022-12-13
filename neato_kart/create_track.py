@@ -98,9 +98,9 @@ class CreateTrack():
         out_track = np.asarray(out_track)
         in_track = np.asarray(in_track)
 
-        track_image = cv2.polylines(track_image, [center_track], False, (255, 0, 0), 5)
-        track_image = cv2.polylines(track_image, [out_track], False, (0, 255, 0), 5)
-        track_image = cv2.polylines(track_image, [in_track], False, (0, 255, 0), 5)
+        track_image = cv2.polylines(track_image, [center_track], True, (255, 0, 0), 5)
+        track_image = cv2.polylines(track_image, [out_track], True, (0, 255, 0), 5)
+        track_image = cv2.polylines(track_image, [in_track], True, (0, 255, 0), 5)
         return track_image
 
     def get_track_pixel_points(self, track):
