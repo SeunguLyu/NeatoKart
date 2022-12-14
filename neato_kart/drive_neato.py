@@ -28,7 +28,7 @@ class DriveNeato(Node):
         self.declare_parameter('robot_name', '')
         robot_name = self.get_parameter('robot_name').get_parameter_value().string_value
 
-        self.map_name = "real_map.json"
+        self.map_name = "example_map.json"
         self.map_path = os.path.dirname(os.path.realpath(__file__))
         self.map_path = os.path.abspath(os.path.join(self.map_path, os.pardir))
         self.map_path = os.path.join(self.map_path, 'maps', self.map_name)
@@ -180,7 +180,7 @@ class DriveNeato(Node):
 
             #cv2.imshow('video_window', detected_image)
             self.pub_image.publish(self.bridge.cv2_to_imgmsg(detected_image, "bgr8"))
-            print("april tag detection time: {0}".format(time.time() - start))
+            #print("april tag detection time: {0}".format(time.time() - start))
 
     def update_map_in_odom(self):
         tags = []
@@ -321,7 +321,6 @@ class DriveNeato(Node):
         marker.scale.z = 0.1
 
         marker.type = Marker.SPHERE
-        return marker
 
 def main(args=None):
     rclpy.init()
