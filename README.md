@@ -119,13 +119,19 @@ The resulting map looks like above minimap. The green poins indicate checkpoints
 ### Map
 ### Items
 1. Banana
+
 ![](documents/images/banana.gif)
 ![](documents/images/banana2.gif)
+
 2. Turtle
+
 ![](documents/images/turtle.gif)
 ![](documents/images/turtle2.gif)
+
 3. Boost
+
 ![](documents/images/boost.gif)
+
 ### Track
 ### Minimap
 ### AprilTag
