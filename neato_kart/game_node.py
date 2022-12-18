@@ -30,37 +30,47 @@ class ItemType(Enum):
     BOOST = 3
 
 class GameNode(Node):
+    ''' Node that receive data from drive neato nodes and user input to play the Neato Kart game
+        Currently supports local 1 vs 1 play between two users'''
     def __init__(self):
         super().__init__('game_node')
 
+        # define different parameters for each robot
         self.declare_parameter('robot1_name', '')
         robot1_name = self.get_parameter('robot1_name').get_parameter_value().string_value
 
         self.declare_parameter('robot2_name', 'robot2')
         robot2_name = self.get_parameter('robot2_name').get_parameter_value().string_value
 
+        # define asset directory to load sounds and images
         self.asset_directory = os.path.dirname(os.path.realpath(__file__))
         self.asset_directory = os.path.abspath(os.path.join(self.asset_directory, os.pardir))
         self.asset_directory = os.path.join(self.asset_directory, 'assets')
 
+        # if robot's name is defined, change topic names
         if robot1_name != "":
             robot1_name += "/"
 
         robot2_name += "/"
 
+        # subscribe to processed image topic from drive_neato node
         self.create_subscription(Image, robot1_name + "processed_image", self.process_robot1_image, 10)
         self.create_subscription(Image, robot2_name + "processed_image", self.process_robot2_image, 10)
 
+        # subscribe to map position topic from drive_neato node
         self.create_subscription(Pose2D, robot1_name + "map_position", self.process_robot1_position, 10)
         self.create_subscription(Pose2D, robot2_name + "map_position", self.process_robot2_position, 10)
 
+        # publish velocity to control the Neatos
         self.pub_robot1_vel = self.create_publisher(Twist, robot1_name + 'cmd_vel', 10)
         self.pub_robot2_vel = self.create_publisher(Twist, robot2_name + 'cmd_vel', 10)
 
+        # image related
         self.cv_robot1 = None
         self.cv_robot2 = None
         self.bridge = CvBridge()
 
+        # Game start related
         self.game_start = False
         self.game_tick = 0
 
@@ -72,7 +82,7 @@ class GameNode(Node):
         self.title_tick = 0
 
         # Minimap Related
-        self.map_name = "demo_map.json"
+        self.map_name = "test5.json"
         self.map_path = os.path.dirname(os.path.realpath(__file__))
         self.map_path = os.path.abspath(os.path.join(self.map_path, os.pardir))
         self.map_path = os.path.join(self.map_path, 'maps', self.map_name)
@@ -85,7 +95,7 @@ class GameNode(Node):
         self.map_tag_list = []
         self.map_point_list = []
 
-        # Game Related
+        # Neato Speed Limit Related
         self.normal_lin_speed = 0.2
         self.boost_lin_speed = 0.3
         self.ang_speed = 1.0
@@ -106,8 +116,10 @@ class GameNode(Node):
         self.robot_current_tag = [0, 0]
         self.robot_total_tag = [0, 0]
 
+        # Load map
         self.load_map_from_json()
 
+        # Initialize Game Status
         self.game_state = GameState.GAME_TITLE
 
         thread = Thread(target=self.loop_wrapper)
@@ -124,6 +136,7 @@ class GameNode(Node):
         self.cv_robot2 = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
 
     def process_robot1_position(self, msg):
+        """ Process Neato 1 position and save it as a MapPoint"""
         pose = MapPoint()
         pose.x = msg.x
         pose.y = msg.y
@@ -131,6 +144,7 @@ class GameNode(Node):
         self.robot_position[0] = pose
 
     def process_robot2_position(self, msg):
+        """ Process Neato 2 position and save it as a MapPoint"""
         pose = MapPoint()
         pose.x = msg.x
         pose.y = msg.y
@@ -141,6 +155,8 @@ class GameNode(Node):
         """ This function takes care of calling the run_loop function repeatedly.
             We are using a separate thread to run the loop_wrapper to work around
             issues with single threaded executors in ROS2 """
+
+        # initialize pygame with mixer to play music
         pygame.init()
         pygame.mixer.pre_init(44100, -16, 2, 2048)
         pygame.mixer.init()
@@ -148,6 +164,7 @@ class GameNode(Node):
 
         pygame.mixer.music.set_volume(0.35)
 
+        # define sounds and images that are needed during the gameplay
         self.start_sound = pygame.mixer.Sound(os.path.join(self.asset_directory, 'sound', 'beeping.mp3'))
         self.start_sound.set_volume(0.25)
         
@@ -165,20 +182,28 @@ class GameNode(Node):
         self.image_turtle = pygame.image.load(os.path.join(self.asset_directory, 'images', 'turtle.png'))
         self.image_end = pygame.image.load(os.path.join(self.asset_directory, 'images', 'victory.png'))
 
+        # set display
         self.display = pygame.display.set_mode((self.window_width, self.window_height))
         pygame.display.set_caption('Neato Kart')
+
+        # run the game in approximately 30 frames per second
         while True:
             self.run_loop()
-            #time.sleep(0.05)
             pygame.time.wait(66)
 
     def run_loop(self):
+        ''' Main loop that runs the game. Framerate is defined inside the loop_wrapper function'''
+        # get list of keys pressed right now
         keys = pygame.key.get_pressed()
+
+        # check exit status
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
 
+        # if currently in title screen or race didn't start, 
+        # pressing SPACE will proceed the game to next step
         if self.game_state == GameState.GAME_TITLE:
             if keys[pygame.K_SPACE]:
                 self.game_state = GameState.GAME_STOP
@@ -189,6 +214,8 @@ class GameNode(Node):
                 pygame.mixer.Sound.play(self.start_sound)
                 self.game_tick = pygame.time.get_ticks()          
 
+        # move all the turtle shell in the map. 
+        # Also checks if turtle shell went out of boundary, and destory the ones that are out 
         for turtle in self.turtle_list:
             turtle_offset = np.matrix([[0.05],[0],[1]])
             turtle_pose = np.dot(turtle.as_matrix(), turtle_offset)
@@ -201,6 +228,7 @@ class GameNode(Node):
             or turtle.y < self.map_boundary[3] - 1):
                 self.turtle_list.remove(turtle)
 
+        # process robot's behavior if game is in play
         if self.game_state == GameState.GAME_STOP or self.game_state == GameState.GAME_PLAY:
             self.set_robot_control(keys, 0)
             self.set_robot_control(keys, 1)
@@ -211,6 +239,7 @@ class GameNode(Node):
             self.pub_robot1_vel.publish(twt)
             self.pub_robot2_vel.publish(twt)
         
+        # draw the display
         self.display.fill((0,0,0))
         if not self.cv_robot1 is None:
             self.draw_robot_ui(0)
@@ -220,6 +249,9 @@ class GameNode(Node):
         pygame.display.update()
 
     def draw_game_global(self):
+        ''' Draw global components such as game title and countdown.'''
+
+        # display title screen
         if self.game_state == GameState.GAME_TITLE:
             self.display.blit(self.image_background, (0,0))
 
@@ -249,6 +281,7 @@ class GameNode(Node):
 
         elif self.game_state == GameState.GAME_STOP:
             pass    
+        # display 3,2,1 countdown when game starts
         elif self.game_state == GameState.GAME_COUNT:
             if pygame.time.get_ticks() < self.game_tick + 500:
                 pass
@@ -283,7 +316,10 @@ class GameNode(Node):
             self.display.blit(self.image_end, image_rect)
     
     def draw_robot_ui(self, robot_index):
+        ''' Draw user specific UI such as minimap, item, and the camera image'''
         i = robot_index
+
+        # define robot specific values
         offset = 0
         robot_image = None
         robot_pose = self.robot_position[i]
@@ -297,10 +333,10 @@ class GameNode(Node):
         pygame_image = self.convert_opencv_img_to_pygame(robot_image)
         pygame_image = pygame.transform.scale(pygame_image, (952, 714))
 
-        # Draw image
+        # draw converted pygame image
         self.display.blit(pygame_image, (offset, 0))
 
-        # draw items
+        # draw items based on their position in Neato's base frame
         for banana in self.banana_list:
             dist = self.distance_from_pose(banana[0], banana[1], i)
             banana_base_pose = np.dot(robot_pose.as_matrix().getI(), np.matrix([[banana[0]],[banana[1]],[1]]))
@@ -335,7 +371,7 @@ class GameNode(Node):
                 else:
                     self.display.blit(turtle_resized, (offset+turtle_pixel[0]-size/2, turtle_pixel[1]-size/2))
 
-        # draw map
+        # draw minimap
         self.draw_map_at_point((820 + offset,580))
 
         # draw item UI
@@ -369,6 +405,7 @@ class GameNode(Node):
             start_point[0] += circle_distance
 
     def convert_opencv_img_to_pygame(self, opencv_image):
+        ''' Function that converts opencv image into pygame image'''
         opencv_image = opencv_image[:,:,::-1]  #Since OpenCV is BGR and pygame is RGB, it is necessary to convert it.
         shape = opencv_image.shape[1::-1]  #OpenCV(height,width,Number of colors), Pygame(width, height)So this is also converted.
         pygame_image = pygame.image.frombuffer(opencv_image.tostring(), shape, 'RGB')
@@ -376,6 +413,9 @@ class GameNode(Node):
         return pygame_image
     
     def position_to_img_pixel(self, x, y, z=0):
+        ''' Converts a position in Neato's base frame into pixel position in pygame image
+            This is done using the camera matrix values'''
+        # camera position in the base frame
         t_cam_base = np.matrix([[0, 0, 1, 0.2],
                                 [-1, 0, 0, 0],
                                 [0, -1, 0, 0.05],
@@ -386,13 +426,16 @@ class GameNode(Node):
                         [0.000000, 972.962863, 402.829241], 
                         [0.000000, 0.000000, 1.000000]])
         
+        # get object's position inside the camera frame
         pose_in_cam = np.dot(t_cam_base.getI(), np.matrix([[x],[y],[z],[1]]))
 
+        # convert the position into pixel position value
         pixel_in_img = np.dot(K, np.matrix([[pose_in_cam[0,0]],[pose_in_cam[1,0]],[pose_in_cam[2,0]]]))
 
         return (pixel_in_img[0,0]/pixel_in_img[2,0], pixel_in_img[1,0]/pixel_in_img[2,0])
     
     def distance_from_pose(self, x, y, robot_index):
+        ''' Compute distance from robot to certain x,y coordinate in map frame '''
         robot_pose = self.robot_position[robot_index]
 
         if robot_pose == None:
@@ -405,14 +448,17 @@ class GameNode(Node):
         return dist
     
     def set_robot_control(self, keys, robot_index):
+        ''' Set each robot's behavior based on the user's current input '''
         i = robot_index
         key_list = []
+        # define different key for each user
         if i == 0:
             key_list = [pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d, pygame.K_LSHIFT]
         else:
             key_list = [pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT, pygame.K_RSHIFT]
         robot_pose = self.robot_position[i]
         speed = self.normal_lin_speed
+
         # boost check
         if self.robot_on_boost[i]:
             if pygame.time.get_ticks() > self.robot_boost_tick[i] + 5000:
@@ -424,6 +470,7 @@ class GameNode(Node):
         linear_vel = 0.0
         ang_vel = 0.0
 
+        # create Twist msg based on user's key input
         if self.robot_is_rotating[i]:
             ang_vel = 2.0
             if pygame.time.get_ticks() > self.robot_rotate_tick[i] + 3500:
@@ -449,7 +496,8 @@ class GameNode(Node):
         if self.game_state == GameState.GAME_STOP:
             return
 
-        # checkpoint check
+        # check if robot is passing the checkpoint. 
+        # if robot is passing the correct tag, give the user random item
         next_point = self.map_tag_list[self.robot_current_tag[i]]
         checkpoint_dist = self.distance_from_pose(next_point.x, next_point.y, i)
         if checkpoint_dist < 0.4:
@@ -461,12 +509,11 @@ class GameNode(Node):
                 self.game_state = GameState.GAME_END
             if self.robot_item[i] == None:
                 self.robot_item[i] = random.choice(list(ItemType))
-                #self.robot1_item = ItemType.TURTLE
 
         # item related
         if self.robot_is_rotating[i] == False:
-            # using item
             if keys[key_list[4]]:
+                # if banana is used, throw it front 1m or behind 0.3 meter based on user input
                 if self.robot_item[i] == ItemType.BANANA:
                     self.robot_item[i] = None
                     banana_offset = None
@@ -477,7 +524,7 @@ class GameNode(Node):
 
                     banana_pose = np.dot(robot_pose.as_matrix(), banana_offset)
                     self.banana_list.append((banana_pose[0,0], banana_pose[1,0]))
-                
+                # if turtle is used, throw it from 0.3m or behind 0.3 meter based on user input
                 elif self.robot_item[i] == ItemType.TURTLE:
                     self.robot_item[i] = None
                     turtle_offset = None
@@ -493,7 +540,7 @@ class GameNode(Node):
                     turtle_pose = np.dot(robot_pose.as_matrix(), turtle_offset)
                     turtle_point = MapPoint(turtle_pose[0,0], turtle_pose[1,0], turtle_angle)
                     self.turtle_list.append(turtle_point)
-                
+                # if boost is used, set robot on boost variable to raise robot speed
                 elif self.robot_item[i] == ItemType.BOOST:
                     self.robot_item[i] = None
                     self.robot_on_boost[i] = True
@@ -517,6 +564,9 @@ class GameNode(Node):
                     break
     
     def draw_map_at_point(self, center):
+        ''' Draw minimap at specified point. Minimap is created based on the 
+            loaded map data from the JSON file'''
+        # draw border for the minimap
         map_half = self.map_size/2 + 20
         pygame.draw.lines(self.display, (200, 200, 200, 200), True, 
                                 [(center[0] - map_half, center[1] - map_half),
@@ -525,44 +575,53 @@ class GameNode(Node):
                                 (center[0] - map_half, center[1] + map_half)]
                                 , 5)
 
+        # define map origin (0,0) position for this minimap 
         map_center = (center[0] + self.map_center_offset[0], center[1] + self.map_center_offset[1])
 
         point_list = []
         point_list.append(map_center)
 
+        # draw every map points based on the map origin position, 
+        # as the map data is points saved relative to the map origin
         for point in self.map_point_list:
             point_x = map_center[0] - point.y * self.map_multiplier
             point_y = map_center[1] - point.x * self.map_multiplier
 
             point_list.append((point_x, point_y))
+            # draw circle at each point so that map looks connected
             pygame.draw.circle(self.display, (200, 200, 200, 200), (point_x, point_y), 7.5)
-
+        # draw line between each points
         pygame.draw.lines(self.display, (200, 200, 200, 200), False, point_list, 15)
 
+        # draw banana locations
         for banana in self.banana_list:
             point_x = map_center[0] - banana[1] * self.map_multiplier
             point_y = map_center[1] - banana[0] * self.map_multiplier
 
             pygame.draw.circle(self.display, (255,255,0), (point_x, point_y), 5.0)
         
+        # draw turtle locations
         for turtle in self.turtle_list:
             point_x = map_center[0] - turtle.y * self.map_multiplier
             point_y = map_center[1] - turtle.x * self.map_multiplier
 
             pygame.draw.circle(self.display, (128,128,0), (point_x, point_y), 5.0)
         
+        # draw tag locations
         for tag in self.map_tag_list:
             point_x = map_center[0] - tag.y * self.map_multiplier
             point_y = map_center[1] - tag.x * self.map_multiplier
 
             pygame.draw.circle(self.display, (0,255,0), (point_x, point_y), 5.0)
 
+        # draw robot 1 position
         if (self.robot_position[0] != None):
             point_x = map_center[0] - self.robot_position[0].y * self.map_multiplier
             point_y = map_center[1] - self.robot_position[0].x * self.map_multiplier
 
             pygame.draw.circle(self.display, (0,0,255), (point_x, point_y), 10.0)
         
+        # draw robot 2 position
         if (self.robot_position[1] != None):
             point_x = map_center[0] - self.robot_position[1].y * self.map_multiplier
             point_y = map_center[1] - self.robot_position[1].x * self.map_multiplier
@@ -570,6 +629,7 @@ class GameNode(Node):
             pygame.draw.circle(self.display, (0,128,128), (point_x, point_y), 10.0)
 
     def load_map_from_json(self):
+        ''' Load map from saved JSON file. Also define variables needed to draw minimap'''
         data = []
         with open(self.map_path) as f:
             for line in f:
@@ -588,6 +648,7 @@ class GameNode(Node):
             else:
                 self.map_point_list.append(map_point)
 
+            # get the lowest/highest value for x and y
             if map_point.x > high_y:
                 high_y = map_point.x
             if map_point.x < low_y:
@@ -599,11 +660,16 @@ class GameNode(Node):
                 low_x = -map_point.y
         
         self.map_boundary = [high_y, low_y, -low_x, -high_x]
+
+        # set map_multiplier so that longer side (x or y) will be exactly same as the map size
+        # for example, if x side was 10m and y side was 5m and minimap size is 200
+        # map multiplier will be 20 so that minimap does not exceed the boundaries
         if high_x - low_x > high_y - low_y:
             self.map_multiplier = self.map_size/(high_x - low_x)
         else:
             self.map_multiplier = self.map_size/(high_y - low_y)
 
+        # based on the map multiplier, set the map origin position inside the minimap
         x_offset = -(low_x + high_x)/2 * self.map_multiplier
         y_offset = (low_y + high_y)/2 * self.map_multiplier
         self.map_center_offset = (x_offset, y_offset)

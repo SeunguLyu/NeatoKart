@@ -5,6 +5,10 @@ import math
 import json
 
 class MapPoint():
+    '''
+    Convenient class to save a Pose in 2D frame and convert that into different forms
+    such as transformation matrix and dictionary.
+    '''
     def __init__(self, x=0.0, y=0.0, theta=0.0, istag = False, tagid = 0):
         self.x = x
         self.y = y
@@ -67,18 +71,24 @@ def draw_apriltag(detected_image, r):
     return detected_image
 
 def get_tag_2d_pose(r):
+    ''' This function gets the April Tag's position in camera frame as the input
+        and convert that into april's position in the Neato's base frame. '''
+    # tag to camera transformation matrix
     t_tag_cam = np.matrix([[r.pose_R[0][0], r.pose_R[0][1], r.pose_R[0][2], r.pose_t[0][0]],
                                 [r.pose_R[1][0], r.pose_R[1][1], r.pose_R[1][2], r.pose_t[1][0]],
                                 [r.pose_R[2][0], r.pose_R[2][1], r.pose_R[2][2], r.pose_t[2][0]],
                                 [0, 0, 0, 1]])
     
+    # camera to base transformation matrix
     t_cam_base = np.matrix([[0, 0, 1, 0.2],
                                     [-1, 0, 0, 0],
                                     [0, -1, 0, 0.05],
                                     [0, 0, 0, 1]])
 
+    # tag to base transformation matrix
     t_tag_base = np.dot(t_cam_base, t_tag_cam)
     
+    # compute yaw from the tf matrix
     yaw = np.arctan2(t_tag_base[1,2], t_tag_base[0,2])
 
     pose_to_base = MapPoint(t_tag_base[0,3], t_tag_base[1,3], yaw, True)
