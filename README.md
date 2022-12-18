@@ -106,17 +106,26 @@ For convinience, we made a [3D stand model](src/NeatoKart/documents/checkpoint_s
 [![Creating Map](https://img.youtube.com/vi/I1t8w_XXLrw/maxresdefault.jpg)](https://youtu.be/I1t8w_XXLrw)
 ↑ Click to view the video
 
-The above video shows how a new map is created. It is pretty simple - run create_map node, drive a Neato through checkpoints, and save. 
+The above video shows how a new map is created. It is pretty simple - run create_map node, click the OpenCV screen, drive a Neato through checkpoints, click the OpenCV screen again to save. 
 
 ![](documents/images/minimap_capture.png)
+[Saved File From This Drive](maps/example_map.json)
 
 The resulting map looks like above minimap. The green poins indicate checkpoints, and two big points (blue and cyan) represents the Neato's position on the map.
 
 ### Start Race
 
+To start the game, there are required conditions to not have errors:
+
+1. Both drive_neato node should be running with correct robot name parameter
+2. Both Neatos should have detected the first April Tag and see track on the screen
+3. When Neato move, the camera feed is updated real-time
+
+If all these conditions are met, you are safe to press SPACE button and start the game! It is important to pass checkpoints by order that the map was recorded, or else the game will not be able to detect the end condition. Once a player goes through all the checkpoints by order, the game ends.
+
 ## Structure
-### Multi Neato
 ### Map
+1. How map is saved into JSON, and how it is read
 ### Items
 1. Banana
 
@@ -133,13 +142,30 @@ The resulting map looks like above minimap. The green poins indicate checkpoints
 ![](documents/images/boost.gif)
 
 ### Track
+1. How track is created and drawn
 ### Minimap
-### AprilTag
-### Checkpoints
-
+1. How minimap is created
+### AprilTag and Checkpoints
+1. How april tag is detected and used as important tool for frame transformations
+2. Why it is necessary to have multiple checkpoints and update the relative position of neato on the map
 
 ## System architecture
-ROS topic diagram, what each topic does, opencv + pygame, apriltag localization, frame transformation
+
+### Camera Matrix
+
+### Frame Transformation
+1. Camera frame to base frame (April Tag)
+2. Base frame to Odom frame (Neato Position), april tag pose in odom.
+3. april tag pose in map frame, april tag pose in odom frame, map frame pose in odom frame
+4. map frame odom, base to odom, we can know neato position in map frame. (Game)
+5. neato pose in odom frame, map pose in odom frame, map pose in neato base frame (draw Track)
+
+### ROS Nodes
+1. Drive Neato (topics processed images, neato position) subs pubs
+2. Game Node receives the info subs pubs diagram
+
+### ROS and PyGame
+1. Why Pygame, key input, UI
 
 ## Project Stories
 Story 1
