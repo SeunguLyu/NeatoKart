@@ -142,7 +142,7 @@ Even though it sounds complicated, the map is just defined as a list of points a
 
 Origin and each point are computed by the Neato's pose in the Odom frame at the time point were recorded. When the map recording starts, Neato's pose at the time is set as the map origin, and every other point as Neato moves can be computed through the following math:
 
-> $T _{(point, origin)} = T^ {-1} _ {(origin, odom)} • T_ {(point, odom)}$
+> $P_{origin} = T^ {-1} _ {(origin, odom)} • P_{odom}$
 
 Later when the map is loaded by the Neato looking at the April Tags, the map's origin will be updated in the Odom frame in real-time based on the detected tag position so that the whole map can be updated at the same time.
 
