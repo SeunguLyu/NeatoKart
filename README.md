@@ -55,7 +55,7 @@ git fetch upstream
 ```
 2. Connect to first Neato with the following command, with the correct IP
 ```
-$ ros2 launch neato_node2 bringup_multi.py host:=neato1-ip-address-here robot_name:=robot1 udp_video_port:=5002 udp_sensor_port:=7777 gscam_config:='udpsrc port=5002 ! application/x-rtp, payload=96 ! rtpjitterbuffer ! rtph264depay ! avdec_h264  ! videoconvert'
+ros2 launch neato_node2 bringup_multi.py host:=neato1-ip-address-here robot_name:=robot1 udp_video_port:=5002 udp_sensor_port:=7777 gscam_config:='udpsrc port=5002 ! application/x-rtp, payload=96 ! rtpjitterbuffer ! rtph264depay ! avdec_h264  ! videoconvert'
 ```
 3. Connect to the second Neato with the following command, with the correct IP
 ```
@@ -142,7 +142,7 @@ Even though it sounds complicated, the map is just defined as a list of points a
 
 Origin and each point are computed by the Neato's pose in the Odom frame at the time point were recorded. When the map recording starts, Neato's pose at the time is set as the map origin, and every other point as Neato moves can be computed through the following math:
 
-$T_{(point,origin)} = T^{-1}_{(origin,odom)} • T_{(point,odom)}$
+> $T_{(point,origin)} = T^{-1}_{(origin,odom)} • T_{(point,odom)}$
 
 Later when the map is loaded by the Neato looking at the April Tags, the map's origin will be updated in the Odom frame in real-time based on the detected tag position so that the whole map can be updated at the same time.
 
