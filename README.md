@@ -144,6 +144,8 @@ Origin and each point are computed by the Neato's pose in the Odom frame at the 
 
 > $T _{(point,origin)} = T^ {-1} _ {(origin,odom)} • T_ {(point,odom)}$
 
+> $P_{baselink} = T_ {(cam, bl)} • P_{cam}$
+
 Later when the map is loaded by the Neato looking at the April Tags, the map's origin will be updated in the Odom frame in real-time based on the detected tag position so that the whole map can be updated at the same time.
 
 ```json
