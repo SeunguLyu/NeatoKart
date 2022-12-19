@@ -11,6 +11,12 @@ game.
 
 ## Demo
 
+[![Introduction Video](https://img.youtube.com/vi/lLSGq1WrFXU/maxresdefault.jpg)](https://youtu.be/lLSGq1WrFXU)
+↑ Click to view the video
+
+[![Play Demo](https://img.youtube.com/vi/6Exe3-IEtOo/maxresdefault.jpg)](https://youtu.be/6Exe3-IEtOo)
+↑ Click to view the video
+
 ## Run
 1. Follow steps in this [page](https://comprobo22.github.io/How%20to/setup_your_environment) to set up the environment
 2. Clone [neato_packages](https://github.com/SeunguLyu/neato_packages.git) in the ros2 src folder
@@ -109,6 +115,7 @@ For convinience, we made a [3D stand model](src/NeatoKart/documents/checkpoint_s
 The above video shows how a new map is created. It is pretty simple - run create_map node, click the OpenCV screen, drive a Neato through checkpoints, click the OpenCV screen again to save. 
 
 ![](documents/images/minimap_capture.png)
+
 [Saved File From This Drive](maps/example_map.json)
 
 The resulting map looks like above minimap. The green poins indicate checkpoints, and two big points (blue and cyan) represents the Neato's position on the map.
@@ -125,21 +132,50 @@ If all these conditions are met, you are safe to press SPACE button and start th
 
 ## Structure
 ### Map
-1. How map is saved into JSON, and how it is read
+
+```json
+{"x": 0.5264, "y": 0.0022, "theta": 0.004032258064516172, "istag": false, "tagid": 0}
+```
+Every point/tag will be saved like above JSON format and will be loaded as MapPoint object.
+```python
+class MapPoint():
+    '''
+    Convenient class to save a Pose in 2D frame and convert that into different forms
+    such as transformation matrix and dictionary.
+    '''
+    def __init__(self, x=0.0, y=0.0, theta=0.0, istag = False, tagid = 0):
+        self.x = x
+        self.y = y
+        self.theta = theta
+        self.istag = istag
+        self.tagid = tagid
+```
+MapPoint object 
+
+Map's origin is set as (x:0, y:0, theta:0) and every point/tag in the map is saved relative to this origin. Later when the map is loaded by the Neato and its Odom frame, the map's origin will be updated in the Odom frame so that the whole map can be updated at the same time. 
+
+
+
 ### Items
 1. Banana
 
 ![](documents/images/banana.gif)
 ![](documents/images/banana2.gif)
 
+Banana will stay in the map's position where the user first used the item. Any user that steps on it will be rotating at the same position for certain amount of seconds.
+
 2. Turtle
 
 ![](documents/images/turtle.gif)
 ![](documents/images/turtle2.gif)
 
+Turtle will move in the direction of the angle it was first created. Any user that is hit by the turtle will be rotating at the same position for certain amount of seconds.
+
 3. Boost
 
 ![](documents/images/boost.gif)
+
+Boost will raise the Neato's speed by 20% for 5 seconds. 
 
 ### Track
 1. How track is created and drawn
@@ -169,6 +205,8 @@ If all these conditions are met, you are safe to press SPACE button and start th
 
 ## Project Stories
 Story 1
+
 Story 2
+
 Story 3
 
