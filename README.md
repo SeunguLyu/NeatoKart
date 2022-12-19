@@ -213,22 +213,28 @@ Checkpoints are an essential feature of the game to check the progress of each N
 ### Camera Matrix
 
 ### Frame Transformation
-The relevant frames used in this project are the following: map frame, odom frame, base_link frame, camera frame, and april tag frame/pose. Transitions between the aforementioned frames can be represented by the diagram below, and each transition is further discussed after that. 
+The relevant frames used in this project are the following: map frame, odom frame, base_link frame, camera frame, and april tag frame. Transitions between the aforementioned frames can be represented by the diagram below, and each transition is further discussed after that. 
 
 ![](documents/images/frame_transformation.png)
 
-1. Camera frame to base frame (April Tag), base frame to camera frame (Track Generation)
-    The frame transformation from a pose in the camera frame and to a pose in the base_link frame can be given by the equation below, where $T_ {(cam, bl)}$ indicates the transformation matrix from the *base_link frame* to *camera frame* and where $P_{x}$ indicates a pose in the *x* frame.
+1. 
+    The frame transformation from a tag in the camera frame to a tag in the base_link frame can be given by the equation below, where $T_ {(cam, bl)}$ indicates the transformation matrix from the *camera frame* to *base_link frame*.
 
-    > $P_{baselink} = T_ {(cam, bl)} • P_{cam}$
+    > $T_{(tag, bl)} = T_ {(cam, bl)} • T_{(tag, cam)}$
+
+    [Example](https://github.com/SeunguLyu/NeatoKart/blob/95395af0a994e4705739a54bc36191b761b9df84/neato_kart/detect_april_tag.py#L73)
+
+    The above equation is used to determine distance and angle of the tag from the Neato's base_link. The transformation matrix from the tag frame to base_link frame has all the translation/angle information needed.
 
     Because the camera is attached to the Neato at a fixed displacement in the *x*, *z* direction, we can measure those displacements to come up with a transformation matrix from the *camera frame* to *base_link frame*.
 
-    The frame transformation from a pose in the *base_link frame* and to a pose in the *camera frame* is performed by applying the inverse of $T_ {(cam, bl)}$:
-
-    > $P_{camera} = T^ {-1} _ {(cam, bl)} • P_{baselink}$
-
     ![](documents/images/t_cam_base.png)
+
+    Often to draw objects in the game display, the opposite was done to find the pose of object in the camera frame from the pose of object in the base_link frame. The frame transformation from a pose in the *base_link frame* and to a pose in the *camera frame* is performed by applying the inverse of $T_ {(cam, bl)}$:
+
+    > $P_{cam} = T^ {-1} _ {(cam, bl)} • P_{bl}$
+
+    [Example](https://github.com/SeunguLyu/NeatoKart/blob/95395af0a994e4705739a54bc36191b761b9df84/neato_kart/create_track.py#L135)
 
 2. Base frame to Odom frame (Neato Position), april tag pose in odom.
     The frame transformation from a pose in the *base_link frame* and to a pose in the *odom frame* is simply the information published by the odometry node. Given this information, an *april tag pose* (which is a frame by itself as it preserves the location and orientation) can be converted to the *odom frame* with the equation below, where $T_{a, b}$ is the transformation matrix from frame *b* to *a*.
