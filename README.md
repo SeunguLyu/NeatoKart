@@ -12,10 +12,12 @@ game.
 ## Demo
 
 [![Introduction Video](https://img.youtube.com/vi/lLSGq1WrFXU/maxresdefault.jpg)](https://youtu.be/lLSGq1WrFXU)
-↑ Click to view the video
+
+↑ Click to view the introduction video
 
 [![Play Demo](documents/images/race_demo_thumbnail.gif)](https://youtu.be/6Exe3-IEtOo)
-↑ Click to view the video
+
+↑ Click to view the gameplay demo video
 
 ## Run
 1. Follow steps in this [page](https://comprobo22.github.io/How%20to/setup_your_environment) to set up the environment
