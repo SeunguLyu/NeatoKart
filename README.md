@@ -112,7 +112,7 @@ For convenience, we made a [3D stand model](documents/model/checkpoint_stand.stl
 ### Creating Map
 
 [![Creating Map](https://img.youtube.com/vi/I1t8w_XXLrw/maxresdefault.jpg)](https://youtu.be/I1t8w_XXLrw)
-↑ Click to view the video
+↑ Click to view the map creating demo video
 
 The above video shows how a new map is created. It is pretty simple - run create_map node, click the OpenCV screen, drive a Neato through checkpoints, and click the OpenCV screen again to save. 
 
@@ -133,8 +133,18 @@ To start the game, there are required conditions to not have errors:
 
 If all these conditions are met, you are safe to press the SPACE button and start the game! It is important to pass checkpoints in the order that the map was recorded, or else the game will not be able to detect the end condition. Once a player goes through all the checkpoints by order, the game ends.
 
-## Structure
+## Features
 ### Map
+
+The Map is a user-created circuit that Neatos races on. It is created by running the create_map node, and the saved JSON file is used in drive_neato, and game_node so that Neato's know which map to localize themself into. 
+
+Even though it sounds complicated, the map is just defined as a list of points and tags that are relative to the map's origin. The map's origin is set as (x:0, y:0, theta:0) and every point/tag in the map has (x, y, theta) values from that origin. When the tag is recorded, an indication that the point is a tag and the tag id is saved too.
+
+Origin and each point are computed by the Neato's pose in the Odom frame at the time point were recorded. When the map recording starts, Neato's pose at the time is set as the map origin, and every other point as Neato moves can be computed through the following math:
+
+> $T_{point->origin} = T^ {-1} _{origin->odom} • T_{point->odom}$
+
+Later when the map is loaded by the Neato looking at the April Tags, the map's origin will be updated in the Odom frame in real-time based on the detected tag position so that the whole map can be updated at the same time.
 
 ```json
 {"x": 0.5264, "y": 0.0022, "theta": 0.0040, "istag": false, "tagid": 0}
@@ -153,9 +163,7 @@ class MapPoint():
         self.istag = istag
         self.tagid = tagid
 ```
-MapPoint object is a class that helps convert a 2D pose to a transformation matrix or dictionary so that it can be used by multiple functions. This object is used as a base for every frame transformation in this project.
-
-The map's origin is set as (x:0, y:0, theta:0) and every point/tag in the map is saved relative to this origin. Later when the map is loaded by the Neato and in its Odom frame, the map's origin will be updated in the Odom frame in real time based on the detected tag position so that the whole map can be updated at the same time.
+MapPoint object is a class that helps convert a 2D pose from/to a transformation matrix or dictionary so that it can be used by multiple functions. This object is used as a base for every frame transformation in this project.
 
 ### Items
 1. Banana
