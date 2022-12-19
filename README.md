@@ -9,7 +9,31 @@ experience that involves multiple Neatos at the same time, with users’ ability
 own circuits, use items during the race, and a UI that users can look at while playing the
 game.
 
-## Demo
+# Table of Contents
+1. [Demo](#demo)
+2. [Run](#run)
+    1. [Simulation](#simulation)
+    2. [Real World](#real-world)
+4. [Control](#control)
+5. [Guide](#guide)
+    1. [Creating Checkpoints](#create-checkpoints)
+    2. [Creating Map](#create-map)
+    3. [Start Race](#start-race)
+6. [Features](#features)
+    1. [Map](#map)
+    2. [Items](#items)
+    3. [Track](#track)
+    4. [Minimap](#minimap)
+    5. [AprilTag and Checkpoints](#tag-and-checkpoints)
+7. [System Architecture](#system)
+    1. [Camera Matrix](#camera-matrix)  
+    2. [Frame Transformation](#frame-transform)  
+    3. [ROS Nodes](#ros-nodes)  
+    4. [ROS and PyGame](#ros-pygame)  
+8. [Project Stories](#project-stories)  
+   
+
+## Demo <a name="demo"></a>
 
 [![Introduction Video](https://img.youtube.com/vi/lLSGq1WrFXU/maxresdefault.jpg)](https://youtu.be/lLSGq1WrFXU)
 
@@ -19,7 +43,7 @@ game.
 
 ↑ Click to view the gameplay demo video
 
-## Run
+## Run <a name="run"></a>
 1. Follow steps in this [page](https://comprobo22.github.io/How%20to/setup_your_environment) to set up the environment
 2. Clone [neato_packages](https://github.com/SeunguLyu/neato_packages.git) in the ros2 src folder
 3. Clone this repo in the ros2 src folder and build
@@ -28,7 +52,7 @@ game.
 pip install pygame
 pip install dt-apriltags
 ```
-### Simulation
+### Simulation <a name="simulation"></a>
 1. Run the following command to start the gazebo
 ```
 ros2 launch neato2_gazebo neato_maze.py
@@ -46,7 +70,7 @@ ros2 run neato_kart drive_neato
 ros2 run neato_kart game_node
 ```
 
-### Real World
+### Real World <a name="real-world"></a>
 For the real-world setup, this has been tested in a specific network environment (Olin College MAC) where users can remotely connect to each Neatos that runs their nodes through the network. For further information on how this environment is set up, go to this [website](https://comprobo22.github.io/) and look at the "Teaching Team Documentation" section.
 
 1. Switch to the 'multiagent_support' branch in the 'neato_packages' repo, after fetching the upstream repository with the following command:
@@ -77,7 +101,7 @@ ros2 run neato_kart drive_neato --ros-args -p robot_name:="robot2"
 ros2 run neato_kart game_node --ros-args -p robot1_name:="robot1" -p robot2_name:="robot2"
 ```
 
-## Control
+## Control <a name="control"></a>
 1. Global
 ```
 SPACE: Start the Game
@@ -98,8 +122,8 @@ LEFT: Steer Left
 RIGHT: Steer Right
 R_SHIFT: Use Item
 ```
-## Guide
-### Creating Checkpoints
+## Guide <a name="guide"></a>
+### Creating Checkpoints <a name="create-checkpoints"></a>
 
 ![](documents/images/checkpoint.png)
 
@@ -109,7 +133,7 @@ results = self.detector.detect(gray, estimate_tag_pose = True, camera_params=sel
 ```
 For convenience, we made a [3D stand model](documents/model/checkpoint_stand.stl) to hold cardboard boxes. There's no limit on how many checkpoints can be used for this program, but every tag should be unique, or else the game will not work properly.
 
-### Creating Map
+### Creating Map <a name="create-map"></a>
 
 [![Creating Map](https://img.youtube.com/vi/I1t8w_XXLrw/maxresdefault.jpg)](https://youtu.be/I1t8w_XXLrw)
 ↑ Click to view the map creating demo video
@@ -122,7 +146,7 @@ The above video shows how a new map is created. It is pretty simple - run create
 
 The resulting map looks like the above minimap. The green points indicate checkpoints, and two big points (blue and cyan) represent Neato's position on the map.
 
-### Start Race
+### Start Race <a name="start-race"></a>
 
 ![](documents/images/before_start.png)
 To start the game, there are required conditions to not have errors:
@@ -133,8 +157,8 @@ To start the game, there are required conditions to not have errors:
 
 If all these conditions are met, you are safe to press the SPACE button and start the game! It is important to pass checkpoints in the order that the map was recorded, or else the game will not be able to detect the end condition. Once a player goes through all the checkpoints by order, the game ends.
 
-## Features
-### Map
+## Features <a name="features"></a>
+### Map <a name="map"></a>
 
 The Map is a user-created circuit that Neatos races on. It is created by running the create_map node, and the saved JSON file is used in drive_neato, and game_node so that Neato's know which map to localize themself into. 
 
@@ -165,7 +189,7 @@ class MapPoint():
 ```
 MapPoint object is a class that helps convert a 2D pose from/to a transformation matrix or dictionary so that it can be used by multiple functions. This object is used as a base for every frame transformation in this project.
 
-### Items
+### Items <a name="items"></a>
 1. Banana
 
 ![](documents/images/banana.gif)
@@ -186,7 +210,7 @@ The turtle shell will move in the direction of the angle at which it was first c
 
 Boost will raise the Neato's speed by 20% for 5 seconds. 
 
-### Track
+### Track <a name="track"></a>
 
 One key feature to add onto NeatoKart’s AR game experience is the track generation in our real environment. There are three lines that compose the tracks in the gameplay: two green lines drawn to show the outertrack and the innertrack, and one white line to show the centertrack. 
 
@@ -200,7 +224,7 @@ After the points have been converted to camera frame, they can then be converted
 
 When converting camera_frame points to pixel coordinates, we make sure to exclude coordinates with -z values, as they correspond to points that lie behind the Neato’s field of view. Without this filter, the track would be incorrectly drawn during the gameplay. Because this filter eliminates some of the points that consist the track, we chose to draw the track line by line, formed by a set of two consecutive pixel coordinates. 
 
-### Minimap
+### Minimap <a name="minimap"></a>
 
 ![](documents/images/minimap_capture.png)
 
@@ -208,7 +232,7 @@ Minimap is a tool to check the condition of what is happening in the game and th
 
 Minimap is created based on the MapPoints loaded by a saved JSON file. One important aspect is resizing the map so that it can fit into the size of the minimap. The code to resize the minimap based on its shape is written [here](https://github.com/SeunguLyu/NeatoKart/blob/cd0da6d8b62255f77d26d52316ad13e4a6b0ccaa/neato_kart/game_node.py#L651), where map_multiplier is set so that longer side (x or y) will be the same as the map size. For example, if the x side was 10m and y side was 5m and the minimap size is 200 pixels, the map multiplier will be 20 so that minimap does not exceed the boundaries (then the x side will be 200 pixels, the y side is 100 pixels, thus does not exceed the minimap boundaries)
 
-### AprilTag and Checkpoints
+### AprilTag and Checkpoints <a name="tag-and-checkpoints"></a>
 
 ![](documents/images/checkpoint_demo.gif)
 
@@ -218,11 +242,11 @@ Checkpoints are an essential feature of the game to check the progress of each N
 2. By checking that the user is passing by checkpoints in order, we can define the winning condition for this game as "The first user who passed all the checkpoints and come back to the first checkpoint"
 3. To ensure that there is still a chance for the losing player to win, items are given to each user every time they pass by the checkpoint. 
 
-## System architecture
+## System architecture <a name="system"></a>
 
-### Camera Matrix
+### Camera Matrix <a name="camera-matrix"></a>
 
-### Frame Transformation
+### Frame Transformation <a name="frame-transform"></a>
 The relevant frames used in this project are the following: map frame, odom frame, base_link frame, camera frame, and april tag frame. Transitions between the aforementioned frames can be represented by the diagram below, and each transition is further discussed after that. 
 
 ![](documents/images/frame_transformation.png)
@@ -261,18 +285,27 @@ The relevant frames used in this project are the following: map frame, odom fram
     > $P_{odom} = T_ {(odom, baselink)} • T_ {(baselink, cam)} • T_ {(tag, cam)} • T_ {(map, tag)} • P_{map}$
 
     (updating map in the odom frame)
+    
+    This frame transformation is used to continuously update the track points in the map frame to points in the odom frame to reflect the changes if the Neato moves.
 
 4. (Update map in the base frame)
+
+    The same is done to continuously update the track points in the map frame to points in the base frame to reflect the changes if the Neato moves. This process of updating points is done to facilitate the computation that needs to be done in the aforementioned steps.
+    
 5. (Get Neato Position in the Map)
 
-### ROS Nodes
+    Every iteration, the Neato’s current position in the odom frame is given from the odometry node (unless a map origin is defined). To convert the Neato’s position in the map frame, the following tranformation is done once the map origin is defined (이게 언제 define 되는거죠?):
+
+    > $P(map) = T^ {-1} _ {(map \text { }origin, odom)} • P(odom)$
+
+### ROS Nodes <a name="ros-nodes"></a>
 1. Drive Neato (topics processed images, neato position) subs pubs
 2. Game Node receives the info subs pubs diagram
 
-### ROS and PyGame
+### ROS and PyGame <a name="ros-pygame"></a>
 1. Why Pygame, key input, UI
 
-## Project Stories
+## Project Stories <a name="project-stories"></a>
 [Project Story 1](documents/project_story_1.pdf)
 
 [Project Story 2](documents/project_story_2.pdf)
