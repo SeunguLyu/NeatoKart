@@ -299,8 +299,26 @@ The relevant frames used in this project are the following: map frame, odom fram
     > $P(map) = T^ {-1} _ {(map \text { }origin, odom)} • P(odom)$
 
 ### ROS Nodes <a name="ros-nodes"></a>
+
+![](documents/images/rosgraph_nodes_only_hide_all.png)
+
 1. Drive Neato (topics processed images, neato position) subs pubs
+
+    **/drive_neato** is **subscribed** to two topics:
+    1. The raw image topic (*/robot2/camera/image_raw*) that is published by gscam_publisher node from robot2 (*/robot2/gscam_publisher*)
+    2. The odom topic (*/robot2/topic*) that is published by the neato_driver node from robot2 (*/robot2/neato_driver*)
+
+    **/drive-neato** then **publishes** to two topics:
+    1. The map_position topic (*/robot2/map_position*) to the */game_node*. This indicates robot2’s position in the map frame.
+    2. The processed_image topic (*/robot2/processed_image*) to the */game_node*. This image contains all the OpenCV graphics that contains the visual components of the track (e.g. minimap, track, etc.).
+    
 2. Game Node receives the info subs pubs diagram
+
+    **/game_node** is **subscribed** to two topics:
+    The */robot2/map_position* and */robot2/processed_image* mentioned above.
+
+    **/game_node** then **publishes** to one topic:
+    The */robot1/cmd_vel* to (이게 뭐하는 토픽이죠).
 
 ### ROS and PyGame <a name="ros-pygame"></a>
 1. Why Pygame, key input, UI
