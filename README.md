@@ -319,6 +319,8 @@ The relevant frames used in this project are the following: map frame, odom fram
 
 ![](documents/images/rosgraph_nodes_only_hide_all.png)
 
+![](documents/images/ros_nodes.png)
+
 1. Drive Neato (topics processed images, neato position) subs pubs
 
     **/drive_neato** is **subscribed** to two topics:
