@@ -9,7 +9,7 @@ experience that involves multiple Neatos at the same time, with users’ ability
 own circuits, use items during the race, and a UI that users can look at while playing the
 game.
 
-# Table of Contents
+## Table of Contents
 1. [Demo](#demo)
 2. [Run](#run)
     1. [Simulation](#simulation)
@@ -222,7 +222,7 @@ $outer/inner \text{ } track point = (centertrack \text{ } point \text{ } as \tex
 
 After the points have been converted to camera frame, they can then be converted to pixel coordinates by dotting the camera intrinsic matrix with the points themselves. The values for the [camera intrinsic matrix](https://github.com/SeunguLyu/NeatoKart/blob/main/neato_kart/create_track.py#:~:text=%23%20camera%20intrinsics-,self.K,-%3D%20np.) has been calculated through camera calibration. 
 
-When converting camera_frame points to pixel coordinates, we make sure to exclude coordinates with -z values, as they correspond to points that lie behind the Neato’s field of view. Without this filter, the track would be incorrectly drawn during the gameplay. Because this filter eliminates some of the points that consist the track, we chose to draw the track line by line, formed by a set of two consecutive pixel coordinates. 
+When converting camera_frame points to pixel coordinates, we make sure to exclude coordinates with -z values, as they correspond to points that lie behind the Neato’s field of view. Without this filter, the track would be incorrectly drawn during the gameplay. Because this filter eliminates some of the points that consist the track, we chose to draw the track line by line, formed by a set of two consecutive pixel coordinates. Further detail on the camera frame → pixel coordinates transformation is given in [camera matrix](#camera-matrix).
 
 ### Minimap <a name="minimap"></a>
 
@@ -245,6 +245,23 @@ Checkpoints are an essential feature of the game to check the progress of each N
 ## System architecture <a name="system"></a>
 
 ### Camera Matrix <a name="camera-matrix"></a>
+
+![](documents/images/camera_geometry.png)
+
+Given a pose in the camera frame, that pose can be converted to pixel coordinates with the computation below:
+
+```math
+\begin{bmatrix}P_x\\P_y\\z\end{bmatrix} = \begin{bmatrix}f_x & 0 & c_x\\0 & f_y & c_y\\0 & 0 & 1\end{bmatrix} \cdot \begin{bmatrix}x\\y\\z\end{bmatrix}
+```
+```math
+\begin{bmatrix}P_x\\P_y\\z\end{bmatrix} = \begin{bmatrix}f_x \times x + z \times c_x\\f_y \times y + z \times c_y\\z\end{bmatrix}
+```
+```math
+\begin{bmatrix}P_x\\P_y\\1\end{bmatrix} = \begin{bmatrix} \frac{f_x \times x}{z} + c_x\\\frac{f_y \times y}{z} + c_y\\1\end{bmatrix}
+```
+The values of that form the camera intrinsic matrix is retrieved from camera calibration. (camera calibration
+
+When normalizing the pixel coordinates based on the $z$ value, we needed to make sure to deal with the case when a $-z$ value would flip the $P_x, P_y$ that is supposed to be out of the Neato's field of view (since the negative signifies that the point lies behind the Neato), since if $P_x, P_y$ is negative when $z$ is negative as well, that point will appear in the Neato's field of view (since the point value becomes positive).
 
 ### Frame Transformation <a name="frame-transform"></a>
 The relevant frames used in this project are the following: map frame, odom frame, base_link frame, camera frame, and april tag frame. Transitions between the aforementioned frames can be represented by the diagram below, and each transition is further discussed after that. 
