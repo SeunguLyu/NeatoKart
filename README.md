@@ -188,7 +188,17 @@ Boost will raise the Neato's speed by 20% for 5 seconds.
 
 ### Track
 
-1. How to track is created and drawn
+One key feature to add onto NeatoKart’s AR game experience is the track generation in our real environment. There are three lines that compose the tracks in the gameplay: two green lines drawn to show the outertrack and the innertrack, and one white line to show the centertrack. 
+
+Generating the centertrack is simple—since we already have the points that form the track in base_link frame, each of the points just need to be converted from base_link frame → camera frame → pixel coordinates. 
+
+Before talking about how the outer and the innertracks are generated, it is important to note that each of the points that form the track is a pose, meaning that they are a frame by themselves. Given this information, we can create a set of points for the outertrack and the innertrack for every centertrack point by dotting a displacement matrix.
+
+$outer/inner \text{ } track point = (centertrack \text{ } point \text{ } as \text{ } matrix) * (displacement \text{ } matrix)$
+
+After the points have been converted to camera frame, they can then be converted to pixel coordinates by dotting the camera intrinsic matrix with the points themselves. The values for the [camera intrinsic matrix](https://github.com/SeunguLyu/NeatoKart/blob/main/neato_kart/create_track.py#:~:text=%23%20camera%20intrinsics-,self.K,-%3D%20np.) has been calculated through camera calibration. 
+
+When converting camera_frame points to pixel coordinates, we make sure to exclude coordinates with -z values, as they correspond to points that lie behind the Neato’s field of view. Without this filter, the track would be incorrectly drawn during the gameplay. Because this filter eliminates some of the points that consist the track, we chose to draw the track line by line, formed by a set of two consecutive pixel coordinates. 
 
 ### Minimap
 
