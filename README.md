@@ -107,7 +107,7 @@ Checkpoints can be in any dimension as far as Neato can pass under them. The onl
 ```
 results = self.detector.detect(gray, estimate_tag_pose = True, camera_params=self.camera_param, tag_size = YOUR_TAG_SIZE)
 ```
-For convenience, we made a [3D stand model](src/NeatoKart/documents/checkpoint_stand.stl) to hold cardboard boxes. There's no limit on how many checkpoints can be used for this program, but every tag should be unique, or else the game will not work properly.
+For convenience, we made a [3D stand model](src/NeatoKart/documents/model) to hold cardboard boxes. There's no limit on how many checkpoints can be used for this program, but every tag should be unique, or else the game will not work properly.
 
 ### Creating Map
 
