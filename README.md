@@ -259,7 +259,7 @@ Given a pose in the camera frame, that pose can be converted to pixel coordinate
 ```math
 \begin{bmatrix}P_x\\P_y\\1\end{bmatrix} = \begin{bmatrix} \frac{f_x \times x}{z} + c_x\\\frac{f_y \times y}{z} + c_y\\1\end{bmatrix}
 ```
-The values of that form the camera intrinsic matrix is retrieved from camera calibration. (camera calibration
+The values of that form the camera intrinsic matrix is retrieved from camera calibration. (camera calibration 여기서 설명 
 
 When normalizing the pixel coordinates based on the $z$ value, we needed to make sure to deal with the case when a $-z$ value would flip the $P_x, P_y$ that is supposed to be out of the Neato's field of view (since the negative signifies that the point lies behind the Neato), since if $P_x, P_y$ is negative when $z$ is negative as well, that point will appear in the Neato's field of view (since the point value becomes positive).
 
