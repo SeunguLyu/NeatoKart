@@ -226,7 +226,7 @@ The relevant frames used in this project are the following: map frame, odom fram
 
     The above equation is used to determine distance and angle of the tag from the Neato's base_link. The transformation matrix from the tag frame to base_link frame has all the translation/angle information needed.
 
-    Because the camera is attached to the Neato at a fixed displacement in the *x*, *z* direction, we can measure those displacements to come up with a transformation matrix from the *camera frame* to *base_link frame*.
+    Because the camera is attached to the Neato at a fixed displacement in the *x*, *y*, *z* direction, and because we know the rotation between them, we can measure those displacements to come up with a transformation matrix from the *camera frame* to *base_link frame*.
 
     ![](documents/images/t_cam_base.png)
 
@@ -241,6 +241,8 @@ The relevant frames used in this project are the following: map frame, odom fram
 
     > $P_{odom} = T_ {(bl, odom)} • T_ {(cam, bl)} • T_ {(tag, cam)} • P_{tag}$
 
+    (getting the map origin)
+
 3. april tag pose in map frame, april tag pose in odom frame, map frame pose in odom frame
     When the april tag pose is saved, it is automatically saved in reference to the map frame. Therefore, no transformation is needed.
     
@@ -248,8 +250,10 @@ The relevant frames used in this project are the following: map frame, odom fram
     
     > $P_{odom} = T_ {(odom, baselink)} • T_ {(baselink, cam)} • T_ {(tag, cam)} • T_ {(map, tag)} • P_{map}$
 
-4. map frame odom, base to odom, we can know neato position in map frame. (Game)
-5. neato pose in odom frame, map pose in odom frame, map pose in neato base frame (draw Track)
+    (updating map in the odom frame)
+
+4. (Update map in the base frame)
+5. (Get Neato Position in the Map)
 
 ### ROS Nodes
 1. Drive Neato (topics processed images, neato position) subs pubs
