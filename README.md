@@ -190,9 +190,35 @@ Boost will raise the Neato's speed by 20% for 5 seconds.
 ### Camera Matrix
 
 ### Frame Transformation
-1. Camera frame to base frame (April Tag)
+The relevant frames used in this project are the following: map frame, odom frame, base_link frame, camera frame, and april tag frame/pose. Transitions between the aforementioned frames can be represented by the diagram below, and each transition is further discussed after that. 
+
+![](documents/images/frame_transformation.png)
+
+1. Camera frame to base frame (April Tag), base frame to camera frame (Track Generation)
+    The frame transformation from a pose in the camera frame and to a pose in the base_link frame can be given by the equation below, where $T_ {(cam, bl)}$ indicates the transformation matrix from the *base_link frame* to *camera frame* and where $P_{x}$ indicates a pose in the *x* frame.
+
+    > $P_{baselink} = T_ {(cam, bl)} • P_{cam}$
+
+    Because the camera is attached to the Neato at a fixed displacement in the *x*, *z* direction, we can measure those displacements to come up with a transformation matrix from the *camera frame* to *base_link frame*.
+
+    The frame transformation from a pose in the *base_link frame* and to a pose in the *camera frame* is performed by applying the inverse of $T_ {(cam, bl)}$:
+
+    > $P_{camera} = T^ {-1} _ {(cam, bl)} • P_{baselink}$
+
+    ![](documents/images/t_cam_base.png)
+
 2. Base frame to Odom frame (Neato Position), april tag pose in odom.
+    The frame transformation from a pose in the *base_link frame* and to a pose in the *odom frame* is simply the information published by the odometry node. Given this information, an *april tag pose* (which is a frame by itself as it preserves the location and orientation) can be converted to the *odom frame* with the equation below, where $T_{a, b}$ is the transformation matrix from frame *b* to *a*.
+
+    > $P_{odom} = T_ {(bl, odom)} • T_ {(cam, bl)} • T_ {(tag, cam)} • P_{tag}$
+
 3. april tag pose in map frame, april tag pose in odom frame, map frame pose in odom frame
+    When the april tag pose is saved, it is automatically saved in reference to the map frame. Therefore, no transformation is needed.
+    
+    The frame transformation from a pose in the *map frame* to a pose in the *odom frame* can be given by the equation below, where $T_{a, b}$ is the transformation matrix from frame *b* to *a*.
+    
+    > $P_{odom} = T_ {(odom, baselink)} • T_ {(baselink, cam)} • T_ {(tag, cam)} • T_ {(map, tag)} • P_{map}$
+
 4. map frame odom, base to odom, we can know neato position in map frame. (Game)
 5. neato pose in odom frame, map pose in odom frame, map pose in neato base frame (draw Track)
 
