@@ -102,11 +102,14 @@ ros2 run neato_kart game_node --ros-args -p robot1_name:="robot1" -p robot2_name
 ```
 
 ## Control <a name="control"></a>
-1. Global
+Global
+
 ```
 SPACE: Start the Game
 ```
-1. Player 1
+
+Player 1
+
 ```
 W: Accelerate
 S: Decelerate, Use Item Backward
@@ -114,7 +117,9 @@ A: Steer Left
 D: Steer Right
 L_SHIFT: Use Item
 ```
-2. Player 2
+
+Player 2
+
 ```
 UP: Accelerate
 DOWN: Decelerate, Use Item Backward
