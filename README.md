@@ -136,7 +136,7 @@ For convenience, we made a [3D stand model](documents/model/checkpoint_stand.stl
 ### Creating Map <a name="create-map"></a>
 
 [![Creating Map](https://img.youtube.com/vi/I1t8w_XXLrw/maxresdefault.jpg)](https://youtu.be/I1t8w_XXLrw)
-↑ Click to view the map creating demo video
+↑ Click to view the map create demo video
 
 The above video shows how a new map is created. It is pretty simple - run create_map node, click the OpenCV screen, drive a Neato through checkpoints, and click the OpenCV screen again to save. 
 
@@ -212,17 +212,17 @@ Boost will raise the Neato's speed by 20% for 5 seconds.
 
 ### Track <a name="track"></a>
 
-One key feature to add onto NeatoKart’s AR game experience is the track generation in our real environment. There are three lines that compose the tracks in the gameplay: two green lines drawn to show the outertrack and the innertrack, and one white line to show the centertrack. 
+One key feature to add to NeatoKart’s AR game experience is the track generation in our real environment. There are three lines that compose the tracks in the gameplay: two green lines drawn to show the outertrack and the innertrack, and one white line to show the centertrack. 
 
-Generating the centertrack is simple—since we already have the points that form the track in base_link frame, each of the points just need to be converted from base_link frame → camera frame → pixel coordinates. 
+Generating the centertrack is simple—since we already have the points that form the track in base_link frame, each of the points just needs to be converted from base_link frame → camera frame → pixel coordinates. 
 
 Before talking about how the outer and the innertracks are generated, it is important to note that each of the points that form the track is a pose, meaning that they are a frame by themselves. Given this information, we can create a set of points for the outertrack and the innertrack for every centertrack point by dotting a displacement matrix.
 
 $outer/inner \text{ } track point = (centertrack \text{ } point \text{ } as \text{ } matrix) * (displacement \text{ } matrix)$
 
-After the points have been converted to camera frame, they can then be converted to pixel coordinates by dotting the camera intrinsic matrix with the points themselves. The values for the [camera intrinsic matrix](https://github.com/SeunguLyu/NeatoKart/blob/main/neato_kart/create_track.py#:~:text=%23%20camera%20intrinsics-,self.K,-%3D%20np.) has been calculated through camera calibration. 
+After the points have been converted to the camera frame, they can then be converted to pixel coordinates by dotting the camera intrinsic matrix with the points themselves. The values for the [camera intrinsic matrix](https://github.com/SeunguLyu/NeatoKart/blob/main/neato_kart/create_track.py#:~:text=%23%20camera%20intrinsics-,self.K,-%3D%20np.) has been calculated through camera calibration. 
 
-When converting camera_frame points to pixel coordinates, we make sure to exclude coordinates with -z values, as they correspond to points that lie behind the Neato’s field of view. Without this filter, the track would be incorrectly drawn during the gameplay. Because this filter eliminates some of the points that consist the track, we chose to draw the track line by line, formed by a set of two consecutive pixel coordinates. Further detail on the camera frame → pixel coordinates transformation is given in [camera matrix](#camera-matrix).
+When converting camera_frame points to pixel coordinates, we make sure to exclude coordinates with -z values, as they correspond to points that lie behind Neato’s field of view. Without this filter, the track would be incorrectly drawn during the gameplay. Because this filter eliminates some of the points that consist of the track, we chose to draw the track line by line, formed by a set of two consecutive pixel coordinates. Further detail on the camera frame → pixel coordinates transformation is given in [camera matrix](#camera-matrix).
 
 ### Minimap <a name="minimap"></a>
 
@@ -259,12 +259,12 @@ Given a pose in the camera frame, that pose can be converted to pixel coordinate
 ```math
 \begin{bmatrix}P_x\\P_y\\1\end{bmatrix} = \begin{bmatrix} \frac{f_x \times x}{z} + c_x\\\frac{f_y \times y}{z} + c_y\\1\end{bmatrix}
 ```
-The values of that form the camera intrinsic matrix is retrieved from camera calibration. (camera calibration 여기서 설명 해야 할까?)
+The values of that form the camera intrinsic matrix is retrieved from [camera calibration](https://navigation.ros.org/tutorials/docs/camera_calibration.html).
 
 When normalizing the pixel coordinates based on the $z$ value, we needed to make sure to deal with the case when a $-z$ value would flip the $P_x, P_y$ that is supposed to be out of the Neato's field of view (since the negative signifies that the point lies behind the Neato), since if $P_x, P_y$ is negative when $z$ is negative as well, that point will appear in the Neato's field of view (since the point value becomes positive).
 
 ### Frame Transformation <a name="frame-transform"></a>
-The relevant frames used in this project are the following: map frame, odom frame, base_link frame, camera frame, and april tag frame. Transitions between the aforementioned frames can be represented by the diagram below, and each transition is further discussed after that. 
+The relevant frames used in this project are the following: map frame, Odom frame, base_link frame, camera frame, and April Tag frame. Transitions between the aforementioned frames can be represented by the diagram below, and each transition is further discussed after that. 
 
 ![](documents/images/frame_transformation.png)
 
@@ -275,75 +275,80 @@ The relevant frames used in this project are the following: map frame, odom fram
 
     [Example](https://github.com/SeunguLyu/NeatoKart/blob/95395af0a994e4705739a54bc36191b761b9df84/neato_kart/detect_april_tag.py#L73)
 
-    The above equation is used to determine distance and angle of the tag from the Neato's base_link. The transformation matrix from the tag frame to base_link frame has all the translation/angle information needed.
+    The above equation is used to determine the distance and angle of the tag from Neato's base_link. The transformation matrix from the tag frame to the base_link frame has all the translation/angle information needed.
 
     Because the camera is attached to the Neato at a fixed displacement in the *x*, *y*, *z* direction, and because we know the rotation between them, we can measure those displacements to come up with a transformation matrix from the *camera frame* to *base_link frame*.
 
     ![](documents/images/t_cam_base.png)
 
-    Often to draw objects in the game display, the opposite was done to find the pose of object in the camera frame from the pose of object in the base_link frame. The frame transformation from a pose in the *base_link frame* and to a pose in the *camera frame* is performed by applying the inverse of $T_ {(cam, bl)}$:
+    Often to draw objects in the game display, the opposite was done to find the pose of the object in the camera frame from the pose of the object in the base_link frame. The frame transformation from a pose in the *base_link frame* and to a pose in the *camera frame* is performed by applying the inverse of $T_ {(cam, bl)}$:
 
     > $P_{cam} = T^ {-1} _ {(cam, bl)} • P_{bl}$
 
     [Example](https://github.com/SeunguLyu/NeatoKart/blob/95395af0a994e4705739a54bc36191b761b9df84/neato_kart/create_track.py#L135)
 
-2. Base frame to Odom frame (Neato Position), april tag pose in odom.
-    The frame transformation from a pose in the *base_link frame* and to a pose in the *odom frame* is simply the information published by the odometry node. Given this information, an *april tag pose* (which is a frame by itself as it preserves the location and orientation) can be converted to the *odom frame* with the equation below, where $T_{a, b}$ is the transformation matrix from frame *b* to *a*.
+2. 
+    From the tag to base_link transformation, it is possible to localize the Neato's position relative to the tag's position. Since we know the relationship between base_link - Odom frame (from subscribing to the robot's Odom topic), map_origin - tag frame (from the saved map data), and tag - base_link frame (from the above computation), it is possible to get the map_origin - Odom frame relationship, meaning that we can get the pose of the map's origin in the Odom frame. 
 
-    > $P_{odom} = T_ {(bl, odom)} • T_ {(cam, bl)} • T_ {(tag, cam)} • P_{tag}$
+    > $T_{(origin, odom)} = T_ {(bl, odom)} • T_{(tag, bl)} • T^ {-1} _ {(tag, origin)}$
 
-    (getting the map origin)
+    [Example](https://github.com/SeunguLyu/NeatoKart/blob/023f219b50c44a275cd6b32074b36a045acaa2fe/neato_kart/drive_neato.py#L173)
 
-3. april tag pose in map frame, april tag pose in odom frame, map frame pose in odom frame
-    When the april tag pose is saved, it is automatically saved in reference to the map frame. Therefore, no transformation is needed.
+3. 
+    Since we know the relationship between the map's origin - Odom frame, we can now figure out all the points and tags pose from the map in the Odom frame. This process is useful, as, in the situation where Neato cannot update the map's origin, Neato will still have a close estimate of all the points in the map since it will be saved as pose inside the Odom frame, and the Neato will keep getting its position updated from the robot's odom topic.
     
-    The frame transformation from a pose in the *map frame* to a pose in the *odom frame* can be given by the equation below, where $T_{a, b}$ is the transformation matrix from frame *b* to *a*.
+    > $T_{(point, odom)} = T_ {(origin, odom)} • T_{(point, origin)}$
+    > $T_{(tag, odom)} = T_ {(origin, odom)} • T_{(tag, origin)}$
+
+    [Example](https://github.com/SeunguLyu/NeatoKart/blob/023f219b50c44a275cd6b32074b36a045acaa2fe/neato_kart/drive_neato.py#L193)
+
+4. 
+    To draw tracks relative to Neato, it is important to figure out the relationship between Neato and the pose of points from the map. Since we know the transformation from point to Odom =frame and transformation from base_link to Odom frame, it can be easily computed.
+
+    > $T_{(point, bl)} = T^ {-1} _ {(bl, odom)} • T_{(point, odom)}$
+
+    [Example](https://github.com/SeunguLyu/NeatoKart/blob/023f219b50c44a275cd6b32074b36a045acaa2fe/neato_kart/drive_neato.py#L215)
     
-    > $P_{odom} = T_ {(odom, baselink)} • T_ {(baselink, cam)} • T_ {(tag, cam)} • T_ {(map, tag)} • P_{map}$
+5. 
+    Finally, to process the Neato's position in the minimap, and figure out if Neato is colliding with items that are located inside the map frame, it is required to know the transformation from base_link to map_origin. This is done every time node receives a message from the odometry topic, to give the accurate position as possible to the game node. 
 
-    (updating map in the odom frame)
-    
-    This frame transformation is used to continuously update the track points in the map frame to points in the odom frame to reflect the changes if the Neato moves.
+    > $T_{(bl, origin)} = T^ {-1} _ {(origin, odom)} • T_{(bl, odom)}$
 
-4. (Update map in the base frame)
-
-    The same is done to continuously update the track points in the map frame to points in the base frame to reflect the changes if the Neato moves. This process of updating points is done to facilitate the computation that needs to be done in the aforementioned steps.
-    
-5. (Get Neato Position in the Map)
-
-    Every iteration, the Neato’s current position in the odom frame is given from the odometry node (unless a map origin is defined). To convert the Neato’s position in the map frame, the following tranformation is done once the map origin is defined (이게 언제 define 되는거죠?):
-
-    > $P(map) = T^ {-1} _ {(map \text { }origin, odom)} • P(odom)$
+    [Example](https://github.com/SeunguLyu/NeatoKart/blob/023f219b50c44a275cd6b32074b36a045acaa2fe/neato_kart/drive_neato.py#L111)
 
 ### ROS Nodes <a name="ros-nodes"></a>
-
-![](documents/images/rosgraph_nodes_only_hide_all.png)
 
 ![](documents/images/ros_nodes.png)
 
 1. Drive Neato (topics processed images, neato position) subs pubs
 
     **/drive_neato** is **subscribed** to two topics:
-    1. The raw image topic (*/robot2/camera/image_raw*) that is published by gscam_publisher node from robot2 (*/robot2/gscam_publisher*)
-    2. The odom topic (*/robot2/topic*) that is published by the neato_driver node from robot2 (*/robot2/neato_driver*)
+    1. The raw image topic (*/robot2/camera/image_raw*) that is published by gscam_publisher node from robot2.
+    2. The odom topic (*/robot2/odom*) that is published by the neato_driver node from robot2.
 
     **/drive-neato** then **publishes** to two topics:
     1. The map_position topic (*/robot2/map_position*) to the */game_node*. This indicates robot2’s position in the map frame.
-    2. The processed_image topic (*/robot2/processed_image*) to the */game_node*. This image contains all the OpenCV graphics that contains the visual components of the track (e.g. minimap, track, etc.).
+    2. The processed_image topic (*/robot2/processed_image*) to the */game_node*. This image contains all the OpenCV graphics that contain the visual components of the track.
     
 2. Game Node receives the info subs pubs diagram
 
     **/game_node** is **subscribed** to two topics:
     The */robot2/map_position* and */robot2/processed_image* mentioned above.
 
-    **/game_node** then **publishes** to one topic:
-    The */robot1/cmd_vel* to (이게 뭐하는 토픽이죠).
+    **/game_node** then **publishes** to topics:
+    The */robot1/cmd_vel* and */robot2/cmd_vel* controls velocity of two robots.
 
 ### ROS and PyGame <a name="ros-pygame"></a>
-1. Why Pygame, key input, UI
+
+Integrating PyGame with ROS2 was very successful, as it achieved three major goals:
+
+1. Retrieve multiple key inputs from the user and process them real-time
+2. Provide an easy way to create a UI with less computation
+3. Provide a way to give sound feedback to the user.
+
+For people who are looking for a game-like experience involving robots, we can highly recommend integrating ROS and PyGame. 
 
 ## Project Stories <a name="project-stories"></a>
 [Project Story 1](documents/project_story_1.pdf)
 
 [Project Story 2](documents/project_story_2.pdf)
-
