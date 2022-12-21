@@ -303,6 +303,7 @@ The relevant frames used in this project are the following: map frame, Odom fram
     Since we know the relationship between the map's origin - Odom frame, we can now figure out all the points and tags pose from the map in the Odom frame. This process is useful, as, in the situation where Neato cannot update the map's origin, Neato will still have a close estimate of all the points in the map since it will be saved as pose inside the Odom frame, and the Neato will keep getting its position updated from the robot's odom topic.
     
     > $T_{(point, odom)} = T_ {(origin, odom)} • T_{(point, origin)}$
+    
     > $T_{(tag, odom)} = T_ {(origin, odom)} • T_{(tag, origin)}$
 
     [Example](https://github.com/SeunguLyu/NeatoKart/blob/023f219b50c44a275cd6b32074b36a045acaa2fe/neato_kart/drive_neato.py#L193)
